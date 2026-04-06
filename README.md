@@ -1,0 +1,2 @@
+# SurvivorLikeGame
+made by ai
