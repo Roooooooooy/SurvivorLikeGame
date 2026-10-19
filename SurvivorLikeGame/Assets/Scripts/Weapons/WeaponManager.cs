@@ -1,83 +1,209 @@
 using UnityEngine;
 using System.Collections.Generic;
 
+// 升级系统：从 Resources/Upgrades 加载 UpgradeData 资产，按权重抽 3 个供选择；
+// 武器满级且满足进化条件时，进化选项优先出现。
 public class WeaponManager : MonoBehaviour
 {
     [Header("Weapons")]
     public List<WeaponBase> activeWeapons = new List<WeaponBase>();
 
-    // All possible weapon types for upgrade selection
-    private string[] allUpgradeOptions = new string[]
-    {
-        "Orb Damage +20%",
-        "Orb Count +1",
-        "Orb Speed +20%",
-        "Projectile Damage +20%",
-        "Projectile Count +1",
-        "Projectile Fire Rate +20%",
-        "Move Speed +10%",
-        "Max Health +20",
-        "Pickup Radius +30%"
-    };
+    private List<UpgradeData> upgradePool;
+    private List<EvolutionRecipe> recipes;
+    private readonly Dictionary<string, int> stacks = new Dictionary<string, int>();
+    private List<UpgradeOption> pendingOptions;
 
-    private string[] pendingOptions;
+    void Start()
+    {
+        activeWeapons = new List<WeaponBase>(GetComponentsInChildren<WeaponBase>());
+        upgradePool = new List<UpgradeData>(Resources.LoadAll<UpgradeData>("Upgrades"));
+        recipes = new List<EvolutionRecipe>(Resources.LoadAll<EvolutionRecipe>("Evolutions"));
+        if (upgradePool.Count == 0)
+            Debug.LogError("WeaponManager: Resources/Upgrades 下没有找到任何 UpgradeData 资产");
+    }
 
     public void ShowUpgradeOptions()
     {
-        // Pick 3 random options
-        List<string> shuffled = new List<string>(allUpgradeOptions);
-        for (int i = shuffled.Count - 1; i > 0; i--)
-        {
-            int j = Random.Range(0, i + 1);
-            var tmp = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = tmp;
-        }
-        pendingOptions = new string[] { shuffled[0], shuffled[1], shuffled[2] };
-
+        pendingOptions = BuildOptions(3);
         if (GameManager.Instance) GameManager.Instance.ShowLevelUp(pendingOptions);
     }
 
     public void SelectUpgrade(int index)
     {
-        if (pendingOptions == null || index >= pendingOptions.Length) return;
-        ApplyUpgrade(pendingOptions[index]);
+        if (pendingOptions == null || index >= pendingOptions.Count) return;
+
+        var option = pendingOptions[index];
+        if (option.IsEvolution)
+            option.evolveTarget.Evolve(option.evolution);
+        else
+            ApplyUpgrade(option.upgrade);
+
         if (GameManager.Instance) GameManager.Instance.HideLevelUp();
     }
 
-    void ApplyUpgrade(string option)
+    // 构造升级选项：进化优先，其余按权重不重复抽取
+    List<UpgradeOption> BuildOptions(int count)
+    {
+        var options = new List<UpgradeOption>();
+
+        foreach (var weapon in activeWeapons)
+        {
+            if (weapon.IsMaxLevel && !weapon.evolved)
+            {
+                foreach (var recipe in recipes)
+                {
+                    if (recipe.baseWeapon != TargetOf(weapon)) continue;
+                    if (!stacks.ContainsKey(recipe.requiredUpgradeId)) continue;
+                    options.Add(new UpgradeOption
+                    {
+                        displayName = "EVOLVE: " + recipe.displayName,
+                        description = recipe.description,
+                        evolution = recipe,
+                        evolveTarget = weapon,
+                    });
+                }
+            }
+        }
+
+        var candidates = new List<UpgradeData>();
+        foreach (var u in upgradePool)
+            if (IsAvailable(u)) candidates.Add(u);
+
+        while (options.Count < count && candidates.Count > 0)
+        {
+            var picked = WeightedPick(candidates);
+            candidates.Remove(picked);
+            options.Add(new UpgradeOption
+            {
+                displayName = picked.displayName,
+                description = picked.description,
+                upgrade = picked,
+            });
+        }
+
+        return options;
+    }
+
+    static WeaponTarget TargetOf(WeaponBase weapon)
+    {
+        if (weapon is OrbWeapon) return WeaponTarget.Orb;
+        if (weapon is ProjectileWeapon) return WeaponTarget.Projectile;
+        return WeaponTarget.All;
+    }
+
+    List<WeaponBase> TargetWeapons(WeaponTarget target)
+    {
+        var result = new List<WeaponBase>();
+        foreach (var w in activeWeapons)
+            if (target == WeaponTarget.All || TargetOf(w) == target)
+                result.Add(w);
+        return result;
+    }
+
+    // 达到堆叠上限、或武器已满级/已进化的对应升级不再出现
+    bool IsAvailable(UpgradeData data)
+    {
+        if (stacks.TryGetValue(data.id, out int n) && n >= data.maxStack) return false;
+
+        foreach (var e in data.effects)
+        {
+            if (e.stat < UpgradeStat.WeaponDamagePct) continue; // 非武器类效果
+            var targets = TargetWeapons(e.weapon);
+            if (targets.Count == 0) return false;
+            bool allMaxed = true;
+            foreach (var w in targets)
+                if (!w.IsMaxLevel && !w.evolved) { allMaxed = false; break; }
+            if (allMaxed) return false;
+        }
+        return true;
+    }
+
+    static UpgradeData WeightedPick(List<UpgradeData> candidates)
+    {
+        int total = 0;
+        foreach (var c in candidates) total += c.weight;
+        int roll = Random.Range(0, total);
+        foreach (var c in candidates)
+        {
+            roll -= c.weight;
+            if (roll < 0) return c;
+        }
+        return candidates[candidates.Count - 1];
+    }
+
+    void ApplyUpgrade(UpgradeData data)
+    {
+        stacks[data.id] = stacks.TryGetValue(data.id, out int n) ? n + 1 : 1;
+        foreach (var e in data.effects) ApplyEffect(e);
+    }
+
+    void ApplyEffect(UpgradeEffect e)
     {
         var player = GetComponent<PlayerController>();
-        var orbWeapon = GetComponentInChildren<OrbWeapon>();
-        var projectileWeapon = GetComponentInChildren<ProjectileWeapon>();
+        var stats = GetComponent<PlayerStats>();
+        var pickup = GetComponent<ExpPickupRadius>();
 
-        switch (option)
+        switch (e.stat)
         {
-            case "Orb Damage +20%":
-                if (orbWeapon) orbWeapon.damage = Mathf.RoundToInt(orbWeapon.damage * 1.2f);
+            case UpgradeStat.MoveSpeedPct:
+                if (stats) stats.moveSpeedMultiplier *= 1f + e.value;
                 break;
-            case "Orb Count +1":
-                if (orbWeapon) orbWeapon.AddOrb();
+            case UpgradeStat.MaxHealthFlat:
+                if (player) { player.maxHealth += (int)e.value; player.currentHealth += (int)e.value; }
                 break;
-            case "Orb Speed +20%":
-                if (orbWeapon) orbWeapon.rotationSpeed *= 1.2f;
+            case UpgradeStat.PickupRadiusPct:
+                if (pickup) pickup.radius *= 1f + e.value;
                 break;
-            case "Projectile Damage +20%":
-                if (projectileWeapon) projectileWeapon.damage = Mathf.RoundToInt(projectileWeapon.damage * 1.2f);
+            case UpgradeStat.ArmorFlat:
+                if (stats) stats.armor += (int)e.value;
                 break;
-            case "Projectile Count +1":
-                if (projectileWeapon) projectileWeapon.projectileCount++;
+            case UpgradeStat.CritChanceFlat:
+                if (stats) stats.critChance = Mathf.Min(1f, stats.critChance + e.value);
                 break;
-            case "Projectile Fire Rate +20%":
-                if (projectileWeapon) projectileWeapon.fireInterval *= 0.8f;
+            case UpgradeStat.CritDamageFlat:
+                if (stats) stats.critMultiplier += e.value;
                 break;
-            case "Move Speed +10%":
-                if (player) player.moveSpeed *= 1.1f;
+            case UpgradeStat.ExpGainPct:
+                if (stats) stats.expMultiplier *= 1f + e.value;
                 break;
-            case "Max Health +20":
-                if (player) { player.maxHealth += 20; player.currentHealth += 20; }
+            case UpgradeStat.AreaPct:
+                if (stats) stats.areaMultiplier *= 1f + e.value;
                 break;
-            case "Pickup Radius +30%":
-                var pickup = GetComponent<ExpPickupRadius>();
-                if (pickup) pickup.radius *= 1.3f;
+            case UpgradeStat.CooldownReductionFlat:
+                if (stats) stats.cooldownReduction = Mathf.Min(0.8f, stats.cooldownReduction + e.value);
+                break;
+            case UpgradeStat.DamagePct:
+                if (stats) stats.damageMultiplier *= 1f + e.value;
+                break;
+            case UpgradeStat.WeaponDamagePct:
+                foreach (var w in TargetWeapons(e.weapon))
+                {
+                    w.damage = Mathf.RoundToInt(w.damage * (1f + e.value));
+                    w.LevelUp();
+                }
+                break;
+            case UpgradeStat.WeaponCountFlat:
+                foreach (var w in TargetWeapons(e.weapon))
+                {
+                    if (w is OrbWeapon orb) orb.AddOrb();
+                    else if (w is ProjectileWeapon proj) proj.projectileCount += (int)e.value;
+                    w.LevelUp();
+                }
+                break;
+            case UpgradeStat.WeaponSpeedPct:
+                foreach (var w in TargetWeapons(e.weapon))
+                {
+                    if (w is OrbWeapon orb) orb.rotationSpeed *= 1f + e.value;
+                    else if (w is ProjectileWeapon proj) proj.projectileSpeed *= 1f + e.value;
+                    w.LevelUp();
+                }
+                break;
+            case UpgradeStat.WeaponIntervalPct:
+                foreach (var w in TargetWeapons(e.weapon))
+                {
+                    w.attackInterval *= 1f - e.value;
+                    w.LevelUp();
+                }
                 break;
         }
     }
