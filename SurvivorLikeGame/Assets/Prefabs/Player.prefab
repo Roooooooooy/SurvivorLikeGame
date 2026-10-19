@@ -65,6 +65,7 @@ GameObject:
   - component: {fileID: 282770538859091836}
   - component: {fileID: 282770538859091839}
   - component: {fileID: 282770538859091838}
+  - component: {fileID: 282770538859091840}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -220,9 +221,29 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 79392ffc3a8d0cd4c8dd254e90060161, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   radius: 3
+--- !u!114 &282770538859091840
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 282770538859091825}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 784a983af6b746a3af8374e87836de08, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  critChance: 0.05
+  critMultiplier: 2
+  cooldownReduction: 0
+  damageMultiplier: 1
+  areaMultiplier: 1
+  armor: 0
+  expMultiplier: 1
+  moveSpeedMultiplier: 1
 --- !u!1 &282770539875691868
 GameObject:
   m_ObjectHideFlags: 0
