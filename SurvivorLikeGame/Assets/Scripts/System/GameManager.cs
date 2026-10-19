@@ -115,16 +115,16 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 0f;
     }
 
-    public void ShowLevelUp(string[] options)
+    public void ShowLevelUp(System.Collections.Generic.List<UpgradeOption> options)
     {
         Time.timeScale = 0f;
         if (levelUpPanel) levelUpPanel.SetActive(true);
         for (int i = 0; i < upgradeButtons.Length; i++)
         {
-            if (i < options.Length)
+            if (i < options.Count)
             {
                 upgradeButtons[i].gameObject.SetActive(true);
-                if (upgradeButtonTexts[i]) upgradeButtonTexts[i].text = options[i];
+                if (upgradeButtonTexts[i]) upgradeButtonTexts[i].text = options[i].displayName;
             }
             else
             {
