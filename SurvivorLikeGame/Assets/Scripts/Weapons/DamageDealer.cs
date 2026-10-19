@@ -8,7 +8,11 @@ public class DamageDealer : MonoBehaviour
     public float damageInterval = 0.5f;
     public bool destroyOnHit = false;
 
+    private PlayerStats sourceStats;
     private Dictionary<Collider2D, float> hitTimers = new Dictionary<Collider2D, float>();
+
+    // 由生成它的武器注入，命中时做全局加成与暴击判定
+    public void SetSourceStats(PlayerStats stats) => sourceStats = stats;
 
     void Update()
     {
@@ -46,7 +50,8 @@ public class DamageDealer : MonoBehaviour
         var enemy = col.GetComponent<EnemyController>();
         if (enemy != null)
         {
-            enemy.TakeDamage(damage);
+            int finalDamage = sourceStats != null ? sourceStats.RollDamage(damage) : damage;
+            enemy.TakeDamage(finalDamage);
             if (destroyOnHit && !isContinuous) Destroy(gameObject);
         }
     }
