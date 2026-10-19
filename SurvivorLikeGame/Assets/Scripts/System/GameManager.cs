@@ -1,7 +1,17 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
+
+// 刷怪表条目：到点解锁，按权重混入刷怪池
+[System.Serializable]
+public class SpawnEntry
+{
+    public GameObject prefab;
+    public float unlockTime = 0f; // 开局多少秒后加入刷怪池
+    public int weight = 10;
+}
 
 public class GameManager : MonoBehaviour
 {
@@ -12,7 +22,7 @@ public class GameManager : MonoBehaviour
     public float gameTime = 0f;
 
     [Header("Enemy Spawning")]
-    public GameObject[] enemyPrefabs;
+    public List<SpawnEntry> spawnTable = new List<SpawnEntry>();
     public float spawnRadius = 15f;
     public float baseSpawnInterval = 2f;
     public float minSpawnInterval = 0.3f;
@@ -77,19 +87,29 @@ public class GameManager : MonoBehaviour
 
     void SpawnEnemy()
     {
-        if (enemyPrefabs == null || enemyPrefabs.Length == 0) return;
+        if (spawnTable == null || spawnTable.Count == 0) return;
         var player = PlayerController.Instance;
         if (player == null) return;
 
+        // 已解锁的敌人按权重随机
+        int total = 0;
+        foreach (var e in spawnTable)
+            if (e.prefab != null && gameTime >= e.unlockTime) total += e.weight;
+        if (total == 0) return;
+
+        int roll = Random.Range(0, total);
+        GameObject chosen = null;
+        foreach (var e in spawnTable)
+        {
+            if (e.prefab == null || gameTime < e.unlockTime) continue;
+            roll -= e.weight;
+            if (roll < 0) { chosen = e.prefab; break; }
+        }
+        if (chosen == null) return;
+
         Vector2 spawnDir = Random.insideUnitCircle.normalized;
         Vector3 spawnPos = player.transform.position + new Vector3(spawnDir.x, spawnDir.y, 0) * spawnRadius;
-
-        int index = 0;
-        // Spawn stronger enemies over time
-        if (gameTime > 120f && enemyPrefabs.Length > 1) index = Random.Range(0, Mathf.Min(2, enemyPrefabs.Length));
-        if (gameTime > 240f && enemyPrefabs.Length > 2) index = Random.Range(0, enemyPrefabs.Length);
-
-        Instantiate(enemyPrefabs[index], spawnPos, Quaternion.identity);
+        Instantiate(chosen, spawnPos, Quaternion.identity);
     }
 
     public void AddKill()
