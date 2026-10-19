@@ -1658,8 +1658,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   isGameOver: 0
   gameTime: 0
-  enemyPrefabs:
-  - {fileID: 142445684653164101, guid: 2cf7b927ad4444744997041e3306d25f, type: 3}
+  spawnTable:
+  - prefab: {fileID: 142445684653164101, guid: 2cf7b927ad4444744997041e3306d25f, type: 3}
+    unlockTime: 0
+    weight: 10
+  - prefab: {fileID: 910000000000000101, guid: e29133bf0ef942c8beeee41d3bea44c1, type: 3}
+    unlockTime: 45
+    weight: 7
+  - prefab: {fileID: 910000000000000101, guid: 18e003bab7254d2fa14c1b4ff4d28ac0, type: 3}
+    unlockTime: 120
+    weight: 6
+  - prefab: {fileID: 910000000000000101, guid: d492065754904e559c05a375585e4f6d, type: 3}
+    unlockTime: 180
+    weight: 5
   spawnRadius: 15
   baseSpawnInterval: 2
   minSpawnInterval: 0.3
