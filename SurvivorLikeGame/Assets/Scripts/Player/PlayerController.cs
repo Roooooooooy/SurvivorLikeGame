@@ -22,6 +22,7 @@ public class PlayerController : MonoBehaviour
     private Rigidbody2D rb;
     private SpriteRenderer spriteRenderer;
     private WeaponManager weaponManager;
+    private PlayerStats stats;
 
     void Awake()
     {
@@ -34,6 +35,8 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         weaponManager = GetComponent<WeaponManager>();
+        stats = GetComponent<PlayerStats>();
+        if (stats == null) stats = gameObject.AddComponent<PlayerStats>();
         currentHealth = maxHealth;
     }
 
@@ -68,7 +71,8 @@ public class PlayerController : MonoBehaviour
         }
 
         dir = Vector2.ClampMagnitude(dir, 1f);
-        rb.linearVelocity = dir * moveSpeed;
+        float speed = moveSpeed * (stats != null ? stats.moveSpeedMultiplier : 1f);
+        rb.linearVelocity = dir * speed;
 
         // Flip sprite based on movement direction
         if (dir.x != 0)
@@ -78,6 +82,9 @@ public class PlayerController : MonoBehaviour
     public void TakeDamage(int damage)
     {
         if (invincibleTimer > 0f) return;
+
+        // 护甲固定减伤，至少保留 1 点伤害
+        if (stats != null) damage = Mathf.Max(1, damage - stats.armor);
 
         currentHealth -= damage;
         invincibleTimer = invincibleDuration;
@@ -106,6 +113,7 @@ public class PlayerController : MonoBehaviour
 
     public void GainExp(int amount)
     {
+        if (stats != null) amount = Mathf.RoundToInt(amount * stats.expMultiplier);
         currentExp += amount;
         while (currentExp >= expToNextLevel)
         {
