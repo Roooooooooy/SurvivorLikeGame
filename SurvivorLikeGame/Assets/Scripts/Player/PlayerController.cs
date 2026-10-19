@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
@@ -48,14 +49,30 @@ public class PlayerController : MonoBehaviour
 
     void HandleMovement()
     {
-        float h = Input.GetAxisRaw("Horizontal");
-        float v = Input.GetAxisRaw("Vertical");
-        Vector2 dir = new Vector2(h, v).normalized;
-        rb.velocity = dir * moveSpeed;
+        Vector2 dir = Vector2.zero;
+
+        var keyboard = Keyboard.current;
+        if (keyboard != null)
+        {
+            if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) dir.x -= 1f;
+            if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) dir.x += 1f;
+            if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) dir.y -= 1f;
+            if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) dir.y += 1f;
+        }
+
+        var gamepad = Gamepad.current;
+        if (gamepad != null)
+        {
+            Vector2 stick = gamepad.leftStick.ReadValue();
+            if (stick.sqrMagnitude > dir.sqrMagnitude) dir = stick;
+        }
+
+        dir = Vector2.ClampMagnitude(dir, 1f);
+        rb.linearVelocity = dir * moveSpeed;
 
         // Flip sprite based on movement direction
-        if (h != 0)
-            spriteRenderer.flipX = h < 0;
+        if (dir.x != 0)
+            spriteRenderer.flipX = dir.x < 0;
     }
 
     public void TakeDamage(int damage)
