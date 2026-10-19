@@ -44,7 +44,7 @@ public class ProjectileWeapon : WeaponBase
             
             GameObject proj = Instantiate(projectilePrefab, transform.position, Quaternion.identity);
             Rigidbody2D rb = proj.GetComponent<Rigidbody2D>();
-            if (rb) rb.velocity = dir * projectileSpeed;
+            if (rb) rb.linearVelocity = dir * projectileSpeed;
 
             // Rotate projectile to face direction
             float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
