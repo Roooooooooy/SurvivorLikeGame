@@ -70,8 +70,8 @@ namespace MCPForUnity.Runtime.Helpers
 
             try
             {
-                // Use FindObjectsOfType for Unity 2021 compatibility.
-                var cams = UnityEngine.Object.FindObjectsOfType<Camera>();
+                // Use FindObjectsByType (Unity 6 API).
+                var cams = UnityEngine.Object.FindObjectsByType<Camera>(UnityEngine.FindObjectsSortMode.None);
                 return cams.FirstOrDefault();
             }
             catch

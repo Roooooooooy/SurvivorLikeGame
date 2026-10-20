@@ -1,8 +1,35 @@
-SurvivorLikeGame/Library/
-SurvivorLikeGame/Temp/FSTimeGet-4582165184b90664980109c2710cc961
-SurvivorLikeGame/Temp/FSTimeGet-69371df929f547b46bcbade37289aad7
-SurvivorLikeGame/Temp/FSTimeGet-ae6dc7bac544c344d82dcd14bbcc8332
-SurvivorLikeGame/Temp/FSTimeGet-d175b28918515314e943837f76c5c2a9
-SurvivorLikeGame/Temp/PropertyDatabase_1265138678
-SurvivorLikeGame/Temp/PropertyDatabase_2066312223
-SurvivorLikeGame/Temp/UnityLockfile
+# Unity generated directories
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+
+# Visual Studio / Rider / VS Code cache
+.vs/
+.idea/
+.vscode/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Crash reports
+sysinfo.txt
+*.stackdump
+
+# OS generated
+.DS_Store
+Thumbs.db

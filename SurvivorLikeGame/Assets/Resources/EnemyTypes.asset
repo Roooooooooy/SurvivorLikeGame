@@ -1,0 +1,76 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c77b38e0f2c42e4a2652a4a441fd2f0, type: 3}
+  m_Name: EnemyTypes
+  m_EditorClassIdentifier:
+  expGemPrefab: {fileID: 7740904159132858243, guid: 83fed91490029c948850985070e5bcee, type: 3}
+  types:
+  - typeName: NormalA
+    sprite: {fileID: 21300000, guid: bf21db32a6d5dbb43b1100b3b47aff50, type: 3}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    scale: 1
+    moveSpeed: 3
+    maxHealth: 30
+    damage: 10
+    expValue: 1
+    behavior: 0
+    explodeTriggerRange: 1.5
+    explodeRadius: 2.5
+    fuseTime: 0.6
+  - typeName: NormalB
+    sprite: {fileID: 21300000, guid: c2abd4e7b7e554a4cb589ff2f8c442ec, type: 3}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    scale: 1
+    moveSpeed: 3
+    maxHealth: 30
+    damage: 10
+    expValue: 1
+    behavior: 0
+    explodeTriggerRange: 1.5
+    explodeRadius: 2.5
+    fuseTime: 0.6
+  - typeName: Fast
+    sprite: {fileID: 21300000, guid: c2abd4e7b7e554a4cb589ff2f8c442ec, type: 3}
+    color: {r: 0.4, g: 1, b: 1, a: 1}
+    scale: 0.75
+    moveSpeed: 5.5
+    maxHealth: 15
+    damage: 5
+    expValue: 1
+    behavior: 0
+    explodeTriggerRange: 1.5
+    explodeRadius: 2.5
+    fuseTime: 0.6
+  - typeName: Tank
+    sprite: {fileID: 21300000, guid: bf21db32a6d5dbb43b1100b3b47aff50, type: 3}
+    color: {r: 0.55, g: 0.2, b: 0.2, a: 1}
+    scale: 1.6
+    moveSpeed: 1.5
+    maxHealth: 120
+    damage: 20
+    expValue: 5
+    behavior: 0
+    explodeTriggerRange: 1.5
+    explodeRadius: 2.5
+    fuseTime: 0.6
+  - typeName: Exploder
+    sprite: {fileID: 21300000, guid: bf21db32a6d5dbb43b1100b3b47aff50, type: 3}
+    color: {r: 1, g: 0.55, b: 0.15, a: 1}
+    scale: 0.9
+    moveSpeed: 4
+    maxHealth: 20
+    damage: 25
+    expValue: 2
+    behavior: 1
+    explodeTriggerRange: 1.5
+    explodeRadius: 2.5
+    fuseTime: 0.6

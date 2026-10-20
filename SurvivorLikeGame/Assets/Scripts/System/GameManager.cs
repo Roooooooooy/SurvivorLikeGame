@@ -1,7 +1,18 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
+
+// 刷怪表条目：到点解锁，按权重混入刷怪池
+// typeIndex 对应 Resources/EnemyTypes.asset 中的类型下标
+[System.Serializable]
+public class SpawnEntry
+{
+    public int typeIndex;
+    public float unlockTime = 0f; // 开局多少秒后加入刷怪池
+    public int weight = 10;
+}
 
 public class GameManager : MonoBehaviour
 {
@@ -12,7 +23,7 @@ public class GameManager : MonoBehaviour
     public float gameTime = 0f;
 
     [Header("Enemy Spawning")]
-    public GameObject[] enemyPrefabs;
+    public List<SpawnEntry> spawnTable = new List<SpawnEntry>();
     public float spawnRadius = 15f;
     public float baseSpawnInterval = 2f;
     public float minSpawnInterval = 0.3f;
@@ -49,6 +60,25 @@ public class GameManager : MonoBehaviour
     {
         if (isGameOver) return;
 
+#if UNITY_EDITOR
+        // 压测：按 F9 在玩家周围爆刷 500 只随机敌人
+        if (UnityEngine.InputSystem.Keyboard.current != null &&
+            UnityEngine.InputSystem.Keyboard.current.f9Key.wasPressedThisFrame)
+        {
+            var p = PlayerController.Instance;
+            if (p != null)
+            {
+                for (int i = 0; i < 500; i++)
+                {
+                    Vector2 d = Random.insideUnitCircle.normalized;
+                    EnemySimulation.Instance.Spawn(
+                        Random.Range(0, EnemySimulation.Instance.TypeCount),
+                        (Vector2)p.transform.position + d * Random.Range(5f, 20f));
+                }
+            }
+        }
+#endif
+
         gameTime += Time.deltaTime;
         UpdateSpawnInterval();
         HandleSpawning();
@@ -77,19 +107,28 @@ public class GameManager : MonoBehaviour
 
     void SpawnEnemy()
     {
-        if (enemyPrefabs == null || enemyPrefabs.Length == 0) return;
+        if (spawnTable == null || spawnTable.Count == 0) return;
         var player = PlayerController.Instance;
         if (player == null) return;
 
+        // 已解锁的敌人按权重随机
+        int total = 0;
+        foreach (var e in spawnTable)
+            if (gameTime >= e.unlockTime) total += e.weight;
+        if (total == 0) return;
+
+        int roll = Random.Range(0, total);
+        int typeIndex = 0;
+        foreach (var e in spawnTable)
+        {
+            if (gameTime < e.unlockTime) continue;
+            roll -= e.weight;
+            if (roll < 0) { typeIndex = e.typeIndex; break; }
+        }
+
         Vector2 spawnDir = Random.insideUnitCircle.normalized;
         Vector3 spawnPos = player.transform.position + new Vector3(spawnDir.x, spawnDir.y, 0) * spawnRadius;
-
-        int index = 0;
-        // Spawn stronger enemies over time
-        if (gameTime > 120f && enemyPrefabs.Length > 1) index = Random.Range(0, Mathf.Min(2, enemyPrefabs.Length));
-        if (gameTime > 240f && enemyPrefabs.Length > 2) index = Random.Range(0, enemyPrefabs.Length);
-
-        Instantiate(enemyPrefabs[index], spawnPos, Quaternion.identity);
+        EnemySimulation.Instance.Spawn(typeIndex, spawnPos);
     }
 
     public void AddKill()
@@ -115,16 +154,16 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 0f;
     }
 
-    public void ShowLevelUp(string[] options)
+    public void ShowLevelUp(System.Collections.Generic.List<UpgradeOption> options)
     {
         Time.timeScale = 0f;
         if (levelUpPanel) levelUpPanel.SetActive(true);
         for (int i = 0; i < upgradeButtons.Length; i++)
         {
-            if (i < options.Length)
+            if (i < options.Count)
             {
                 upgradeButtons[i].gameObject.SetActive(true);
-                if (upgradeButtonTexts[i]) upgradeButtonTexts[i].text = options[i];
+                if (upgradeButtonTexts[i]) upgradeButtonTexts[i].text = options[i].displayName;
             }
             else
             {

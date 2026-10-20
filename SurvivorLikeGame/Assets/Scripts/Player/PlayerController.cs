@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
@@ -21,6 +22,7 @@ public class PlayerController : MonoBehaviour
     private Rigidbody2D rb;
     private SpriteRenderer spriteRenderer;
     private WeaponManager weaponManager;
+    private PlayerStats stats;
 
     void Awake()
     {
@@ -33,6 +35,8 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         weaponManager = GetComponent<WeaponManager>();
+        stats = GetComponent<PlayerStats>();
+        if (stats == null) stats = gameObject.AddComponent<PlayerStats>();
         currentHealth = maxHealth;
     }
 
@@ -48,19 +52,39 @@ public class PlayerController : MonoBehaviour
 
     void HandleMovement()
     {
-        float h = Input.GetAxisRaw("Horizontal");
-        float v = Input.GetAxisRaw("Vertical");
-        Vector2 dir = new Vector2(h, v).normalized;
-        rb.velocity = dir * moveSpeed;
+        Vector2 dir = Vector2.zero;
+
+        var keyboard = Keyboard.current;
+        if (keyboard != null)
+        {
+            if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) dir.x -= 1f;
+            if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) dir.x += 1f;
+            if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) dir.y -= 1f;
+            if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) dir.y += 1f;
+        }
+
+        var gamepad = Gamepad.current;
+        if (gamepad != null)
+        {
+            Vector2 stick = gamepad.leftStick.ReadValue();
+            if (stick.sqrMagnitude > dir.sqrMagnitude) dir = stick;
+        }
+
+        dir = Vector2.ClampMagnitude(dir, 1f);
+        float speed = moveSpeed * (stats != null ? stats.moveSpeedMultiplier : 1f);
+        rb.linearVelocity = dir * speed;
 
         // Flip sprite based on movement direction
-        if (h != 0)
-            spriteRenderer.flipX = h < 0;
+        if (dir.x != 0)
+            spriteRenderer.flipX = dir.x < 0;
     }
 
     public void TakeDamage(int damage)
     {
         if (invincibleTimer > 0f) return;
+
+        // 护甲固定减伤，至少保留 1 点伤害
+        if (stats != null) damage = Mathf.Max(1, damage - stats.armor);
 
         currentHealth -= damage;
         invincibleTimer = invincibleDuration;
@@ -89,6 +113,7 @@ public class PlayerController : MonoBehaviour
 
     public void GainExp(int amount)
     {
+        if (stats != null) amount = Mathf.RoundToInt(amount * stats.expMultiplier);
         currentExp += amount;
         while (currentExp >= expToNextLevel)
         {
