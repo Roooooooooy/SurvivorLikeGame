@@ -111,8 +111,19 @@ public class PlayerController : MonoBehaviour
         if (GameManager.Instance) GameManager.Instance.GameOver();
     }
 
+#if UNITY_EDITOR
+    // 调试：无视无敌帧立即死亡（F10）
+    public void DebugKill()
+    {
+        invincibleTimer = 0f;
+        currentHealth = 0;
+        Die();
+    }
+#endif
+
     public void GainExp(int amount)
     {
+        if (GameManager.Instance != null && GameManager.Instance.isGameOver) return;
         if (stats != null) amount = Mathf.RoundToInt(amount * stats.expMultiplier);
         currentExp += amount;
         while (currentExp >= expToNextLevel)

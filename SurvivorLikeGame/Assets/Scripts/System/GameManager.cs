@@ -2,7 +2,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
-using TMPro;
 
 // 刷怪表条目：到点解锁，按权重混入刷怪池
 // typeIndex 对应 Resources/EnemyTypes.asset 中的类型下标
@@ -29,16 +28,18 @@ public class GameManager : MonoBehaviour
     public float minSpawnInterval = 0.3f;
 
     [Header("UI References")]
+    public GameObject titleScreen;
     public Text timerText;
     public Text killCountText;
     public GameObject gameOverPanel;
     public GameObject levelUpPanel;
     public Button[] upgradeButtons;
-    public TMP_Text[] upgradeButtonTexts;
+    public Text[] upgradeButtonTexts;
 
     private int killCount = 0;
     private float spawnTimer = 0f;
     private float currentSpawnInterval;
+    private bool isTitleScreen = false;
 
     void Awake()
     {
@@ -54,10 +55,53 @@ public class GameManager : MonoBehaviour
         {
             levelUpPanel.SetActive(false);
         }
+
+        // 游戏首页：暂停游戏逻辑，任意键开始
+        if (titleScreen != null)
+        {
+            isTitleScreen = true;
+            titleScreen.SetActive(true);
+            Time.timeScale = 0f;
+        }
+    }
+
+    void StartGame()
+    {
+        isTitleScreen = false;
+        if (titleScreen) titleScreen.SetActive(false);
+        Time.timeScale = 1f;
     }
 
     void Update()
     {
+        // 快捷键：升级界面按 1/2/3 选择；结算界面按 R 重开（timeScale=0 时 Update 照常运行）
+        var kb = UnityEngine.InputSystem.Keyboard.current;
+        if (isTitleScreen)
+        {
+            if (kb != null && kb.anyKey.wasPressedThisFrame) StartGame();
+            return;
+        }
+        if (kb != null)
+        {
+#if UNITY_EDITOR
+            // 调试：F10 立即死亡（测试死亡演出）
+            if (kb.f10Key.wasPressedThisFrame && PlayerController.Instance != null)
+                PlayerController.Instance.DebugKill();
+#endif
+            if (levelUpPanel != null && levelUpPanel.activeSelf)
+            {
+                var wm = PlayerController.Instance != null
+                    ? PlayerController.Instance.GetComponent<WeaponManager>() : null;
+                if (wm != null)
+                {
+                    if (kb.digit1Key.wasPressedThisFrame) wm.SelectUpgrade(0);
+                    else if (kb.digit2Key.wasPressedThisFrame) wm.SelectUpgrade(1);
+                    else if (kb.digit3Key.wasPressedThisFrame) wm.SelectUpgrade(2);
+                }
+            }
+            if (isGameOver && kb.rKey.wasPressedThisFrame) RestartGame();
+        }
+
         if (isGameOver) return;
 
 #if UNITY_EDITOR
@@ -149,13 +193,17 @@ public class GameManager : MonoBehaviour
 
     public void GameOver()
     {
+        Debug.Log("[GameManager] GameOver 触发，gameOverPanel=" + (gameOverPanel != null));
         isGameOver = true;
+        // 黑魂式死亡：不暂停时间，怪继续移动；YOU DIED 演出后自动回主页
+        Time.timeScale = 1f;
+        if (levelUpPanel) levelUpPanel.SetActive(false);
         if (gameOverPanel) gameOverPanel.SetActive(true);
-        Time.timeScale = 0f;
     }
 
     public void ShowLevelUp(System.Collections.Generic.List<UpgradeOption> options)
     {
+        if (isGameOver) return;
         Time.timeScale = 0f;
         if (levelUpPanel) levelUpPanel.SetActive(true);
         for (int i = 0; i < upgradeButtons.Length; i++)
