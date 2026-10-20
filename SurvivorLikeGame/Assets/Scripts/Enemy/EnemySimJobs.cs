@@ -21,7 +21,24 @@ public partial class EnemySimulation
         public void Execute(int i)
         {
             var e = enemies[i];
-            if (e.alive == 0) return;
+
+            // 死亡动画期：只衰减计时，不移动
+            if (e.alive == 0)
+            {
+                if ((e.flags & FLAG_DYING) != 0)
+                {
+                    e.deathTimer -= deltaTime;
+                    enemies[i] = e;
+                }
+                return;
+            }
+
+            // 击退：冲量位移 + 指数衰减
+            if (math.lengthsq(e.knockback) > 0.0001f)
+            {
+                e.position += e.knockback * deltaTime;
+                e.knockback *= math.max(0f, 1f - 8f * deltaTime);
+            }
 
             float2 toPlayer = playerPos - e.position;
             float dist = math.length(toPlayer);

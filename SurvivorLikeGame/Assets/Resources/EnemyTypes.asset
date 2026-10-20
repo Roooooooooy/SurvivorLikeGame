@@ -15,9 +15,9 @@ MonoBehaviour:
   expGemPrefab: {fileID: 7740904159132858243, guid: 83fed91490029c948850985070e5bcee, type: 3}
   types:
   - typeName: NormalA
-    sprite: {fileID: 21300000, guid: bf21db32a6d5dbb43b1100b3b47aff50, type: 3}
+    sprite: {fileID: 21300000, guid: d3726a1da603442fa067567e4a04e7b5, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
-    scale: 1
+    scale: 1.6
     moveSpeed: 3
     maxHealth: 30
     damage: 10
@@ -26,10 +26,13 @@ MonoBehaviour:
     explodeTriggerRange: 1.5
     explodeRadius: 2.5
     fuseTime: 0.6
+    animFrames: 10
+    animFps: 10
+    hasDeathAnim: 1
   - typeName: NormalB
-    sprite: {fileID: 21300000, guid: c2abd4e7b7e554a4cb589ff2f8c442ec, type: 3}
+    sprite: {fileID: 21300000, guid: c329f8a0cc5c4b40af958b913e2d2681, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
-    scale: 1
+    scale: 1.6
     moveSpeed: 3
     maxHealth: 30
     damage: 10
@@ -38,10 +41,13 @@ MonoBehaviour:
     explodeTriggerRange: 1.5
     explodeRadius: 2.5
     fuseTime: 0.6
+    animFrames: 10
+    animFps: 10
+    hasDeathAnim: 1
   - typeName: Fast
-    sprite: {fileID: 21300000, guid: c2abd4e7b7e554a4cb589ff2f8c442ec, type: 3}
-    color: {r: 0.4, g: 1, b: 1, a: 1}
-    scale: 0.75
+    sprite: {fileID: 21300000, guid: bc00e087764c42ed9c2a30eef908a8ae, type: 3}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    scale: 1.3
     moveSpeed: 5.5
     maxHealth: 15
     damage: 5
@@ -50,10 +56,13 @@ MonoBehaviour:
     explodeTriggerRange: 1.5
     explodeRadius: 2.5
     fuseTime: 0.6
+    animFrames: 10
+    animFps: 13
+    hasDeathAnim: 1
   - typeName: Tank
-    sprite: {fileID: 21300000, guid: bf21db32a6d5dbb43b1100b3b47aff50, type: 3}
-    color: {r: 0.55, g: 0.2, b: 0.2, a: 1}
-    scale: 1.6
+    sprite: {fileID: 21300000, guid: f345426a93514919a26eae357062197c, type: 3}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    scale: 2.8
     moveSpeed: 1.5
     maxHealth: 120
     damage: 20
@@ -62,10 +71,13 @@ MonoBehaviour:
     explodeTriggerRange: 1.5
     explodeRadius: 2.5
     fuseTime: 0.6
+    animFrames: 10
+    animFps: 7
+    hasDeathAnim: 1
   - typeName: Exploder
-    sprite: {fileID: 21300000, guid: bf21db32a6d5dbb43b1100b3b47aff50, type: 3}
-    color: {r: 1, g: 0.55, b: 0.15, a: 1}
-    scale: 0.9
+    sprite: {fileID: 21300000, guid: 57cc3a0a0dc34fc4803c0402c11568dd, type: 3}
+    color: {r: 1, g: 1, b: 1, a: 1}
+    scale: 1.6
     moveSpeed: 4
     maxHealth: 20
     damage: 25
@@ -74,3 +86,6 @@ MonoBehaviour:
     explodeTriggerRange: 1.5
     explodeRadius: 2.5
     fuseTime: 0.6
+    animFrames: 3
+    animFps: 10
+    hasDeathAnim: 0
