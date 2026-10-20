@@ -10,17 +10,24 @@ public partial class EnemySimulation : MonoBehaviour
     public struct EnemyData
     {
         public float2 position;
+        public float2 knockback;   // 击退速度，MoveJob 中衰减
         public float health;
         public int typeIndex;
         public float flashTimer;   // 受击闪白剩余时间
         public float fuseTimer;    // <0 未引燃；>=0 引燃倒计时
         public float lastTickHit;  // 持续伤害（法球）上次命中时间
-        public byte flags;         // bit0: flipX  bit1: explodePending
+        public float animPhase;    // 动画相位（出生随机，避免万怪同帧）
+        public float deathTimer;   // 死亡动画倒计时（仅 FLAG_DYING 后有效）
+        public byte flags;         // bit0: flipX  bit1: explodePending  bit2: dying
         public byte alive;
     }
 
     const byte FLAG_FLIPX = 1;
     const byte FLAG_EXPLODE_PENDING = 2;
+    const byte FLAG_DYING = 4;
+
+    [Header("打击感")]
+    public float knockbackStrength = 4f; // 受击击退初速度
 
     public static EnemySimulation Instance
     {
@@ -151,6 +158,8 @@ public partial class EnemySimulation : MonoBehaviour
             flashTimer = 0f,
             fuseTimer = -1f,
             lastTickHit = -999f,
+            animPhase = UnityEngine.Random.value,
+            deathTimer = -1f,
             flags = 0,
             alive = 1,
         });
@@ -183,9 +192,13 @@ public partial class EnemySimulation : MonoBehaviour
                     e.lastTickHit = Time.time;
                 }
 
+                // 击退：沿伤害源反方向冲量，在 MoveJob 中衰减
+                float2 kbDir = e.position - (float2)center;
+                e.knockback += math.normalizesafe(kbDir) * knockbackStrength;
+
                 e.health -= damage;
                 e.flashTimer = 0.2f;
-                if (e.health <= 0) e.alive = 0;
+                if (e.health <= 0) e.alive = 0; // 死亡逻辑在 ProcessDeaths 统一结算
                 enemies[idx] = e;
                 hits++;
             }
@@ -240,34 +253,49 @@ public partial class EnemySimulation : MonoBehaviour
         }
     }
 
-    // 回收死敌：自爆结算（范围伤害）→ 掉经验宝石 → 击杀计数 → swap-remove 压缩
+    // 死亡两阶段处理：
+    // 1. 逻辑结算（掉宝石/计数/自爆伤害）→ 标记 DYING，进入死亡动画期
+    // 2. 死亡动画播完（deathTimer 归零）→ swap-remove 真正回收
     void ProcessDeaths()
     {
         var player = PlayerController.Instance;
 
         for (int i = 0; i < enemies.Length;)
         {
-            if (enemies[i].alive != 0) { i++; continue; }
-
             var e = enemies[i];
-            var t = types[e.typeIndex];
+            if (e.alive != 0) { i++; continue; }
 
-            if ((e.flags & FLAG_EXPLODE_PENDING) != 0 && player != null)
+            if ((e.flags & FLAG_DYING) == 0)
             {
-                if (Vector2.Distance((Vector2)e.position, player.transform.position) <= t.explodeRadius)
-                    player.TakeDamage(t.damage);
-            }
+                // 阶段 1：逻辑结算
+                var t = types[e.typeIndex];
 
-            if (table.expGemPrefab != null)
+                if ((e.flags & FLAG_EXPLODE_PENDING) != 0 && player != null)
+                {
+                    if (Vector2.Distance((Vector2)e.position, player.transform.position) <= t.explodeRadius)
+                        player.TakeDamage(t.damage);
+                }
+
+                if (table.expGemPrefab != null)
+                {
+                    var gemObj = Instantiate(table.expGemPrefab, (Vector2)e.position, Quaternion.identity);
+                    var gem = gemObj.GetComponent<ExpGem>();
+                    if (gem != null) gem.expAmount = t.expValue;
+                }
+
+                if (GameManager.Instance) GameManager.Instance.AddKill();
+
+                e.flags |= FLAG_DYING;
+                e.deathTimer = t.hasDeathAnim ? t.animFrames / t.animFps : 0.15f;
+                enemies[i] = e;
+                i++;
+            }
+            else if (e.deathTimer < 0f)
             {
-                var gemObj = Instantiate(table.expGemPrefab, (Vector2)e.position, Quaternion.identity);
-                var gem = gemObj.GetComponent<ExpGem>();
-                if (gem != null) gem.expAmount = t.expValue;
+                // 阶段 2：动画播完，回收
+                enemies.RemoveAtSwapBack(i); // 不递增 i，检查换过来的元素
             }
-
-            if (GameManager.Instance) GameManager.Instance.AddKill();
-
-            enemies.RemoveAtSwapBack(i); // 不递增 i，检查换过来的元素
+            else i++;
         }
     }
 }

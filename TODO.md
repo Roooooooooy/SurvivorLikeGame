@@ -1,6 +1,6 @@
 # 玩法拓展 TODO（第三档：大系统）
 
-> 前置已完成：升级系统数据驱动化（`Resources/Upgrades`）、属性中枢 `PlayerStats`、武器进化（`Resources/Evolutions`）、敌人差异化（普通/迅捷/坦克/自爆）、敌人仿真 Jobs+Burst 化（`EnemySimulation`，同屏 5000+，编辑器内按 F9 压测）。
+> 前置已完成：升级系统数据驱动化（`Resources/Upgrades`）、属性中枢 `PlayerStats`、武器进化（`Resources/Evolutions`）、敌人差异化（普通/迅捷/坦克/自爆）、敌人仿真 Jobs+Burst 化（`EnemySimulation`，同屏 5000+，编辑器内按 F9 压测）、素材动画化与打击反馈（像素风素材、敌人行走/死亡帧动画、击退/闪红/死亡反馈）。
 > 以下各项建议按顺序推进，每项做完都可独立发布一版。
 
 ## 1. 波次事件表

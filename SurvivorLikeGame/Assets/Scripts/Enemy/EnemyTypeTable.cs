@@ -23,6 +23,11 @@ public class EnemyTypeData
     public float explodeTriggerRange = 1.5f;
     public float explodeRadius = 2.5f;
     public float fuseTime = 0.6f;
+
+    [Header("动画")]
+    public int animFrames = 1;      // 图集横向帧数，1 = 静态
+    public float animFps = 10f;
+    public bool hasDeathAnim = false; // 图集第 2 行是死亡动画（行走=第 1 行）
 }
 
 [CreateAssetMenu(fileName = "EnemyTypes", menuName = "Survivor/Enemy Type Table")]
