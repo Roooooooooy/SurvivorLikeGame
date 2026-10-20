@@ -129,7 +129,7 @@ public partial class EnemySimulation : MonoBehaviour
     void Update()
     {
         if (!initialized) return;
-        if (GameManager.Instance != null && GameManager.Instance.isGameOver) return;
+        // 注意：死亡演出期间（isGameOver）仿真继续运行——怪群继续涌动，黑魂味更足
 
         var player = PlayerController.Instance;
         if (player == null) return;
@@ -139,7 +139,10 @@ public partial class EnemySimulation : MonoBehaviour
         // 武器 Update 无论何时运行，拿到的网格和数组都是同一时刻的快照。
         ProcessDeaths();
         RunSimJobs(Time.deltaTime);
-        ProcessContacts(player);
+
+        // 玩家已死则不再结算接触伤害
+        if (GameManager.Instance == null || !GameManager.Instance.isGameOver)
+            ProcessContacts(player);
     }
 
     // ---------- 对外 API ----------
