@@ -1,11 +1,7 @@
 using UnityEngine;
 
-public enum EnemyBehavior
-{
-    Chase = 0,     // 追踪 + 接触伤害（默认）
-    Exploder = 1,  // 贴近玩家后引燃，延时范围爆炸
-}
-
+// 注意：本类已被 EnemySimulation（Jobs+Burst 数据仿真）取代，保留仅供回滚参考。
+// EnemyBehavior 枚举已移至 EnemyTypeTable.cs。
 public class EnemyController : MonoBehaviour
 {
     public float moveSpeed = 3f;
