@@ -1,58 +1,39 @@
 using UnityEngine;
-using System.Collections.Generic;
 
+// 伤害区域：每帧对敌人仿真器做一次圆形范围查询，替代原来的物理触发器。
+// isContinuous=true（法球）：持续伤害，同一敌人有命中间隔（间隔在 EnemySimulation 上配置）
+// destroyOnHit=true（飞弹）：命中即销毁自身
 public class DamageDealer : MonoBehaviour
 {
     public int damage = 10;
     public bool isContinuous = false;
-    public float damageInterval = 0.5f;
+    public float damageInterval = 0.5f; // 已废弃：持续伤害间隔由 EnemySimulation.tickDamageInterval 统一控制
     public bool destroyOnHit = false;
 
+    private CircleCollider2D col;
     private PlayerStats sourceStats;
-    private Dictionary<Collider2D, float> hitTimers = new Dictionary<Collider2D, float>();
 
     // 由生成它的武器注入，命中时做全局加成与暴击判定
     public void SetSourceStats(PlayerStats stats) => sourceStats = stats;
 
+    void OnEnable()
+    {
+        col = GetComponent<CircleCollider2D>();
+    }
+
     void Update()
     {
-        if (!isContinuous) return;
+        if (GameManager.Instance != null && GameManager.Instance.isGameOver) return;
+        var sim = EnemySimulation.Instance;
+        if (sim == null) return;
 
-        // Clean up or update timers
-        List<Collider2D> keys = new List<Collider2D>(hitTimers.Keys);
-        foreach (var key in keys)
-        {
-            if (key == null) hitTimers.Remove(key);
-            else if (hitTimers[key] > 0) hitTimers[key] -= Time.deltaTime;
-        }
-    }
+        float radius = col != null
+            ? col.radius * Mathf.Max(transform.lossyScale.x, transform.lossyScale.y)
+            : 0.5f;
 
-    void OnTriggerEnter2D(Collider2D col)
-    {
-        TryDealDamage(col);
-    }
+        int dmg = sourceStats != null ? sourceStats.RollDamage(damage) : damage;
+        int hits = sim.DamageInCircle(transform.position, radius, dmg, isContinuous);
 
-    void OnTriggerStay2D(Collider2D col)
-    {
-        if (isContinuous) TryDealDamage(col);
-    }
-
-    void TryDealDamage(Collider2D col)
-    {
-        if (!col.CompareTag("Enemy")) return;
-
-        if (isContinuous)
-        {
-            if (hitTimers.ContainsKey(col) && hitTimers[col] > 0) return;
-            hitTimers[col] = damageInterval;
-        }
-
-        var enemy = col.GetComponent<EnemyController>();
-        if (enemy != null)
-        {
-            int finalDamage = sourceStats != null ? sourceStats.RollDamage(damage) : damage;
-            enemy.TakeDamage(finalDamage);
-            if (destroyOnHit && !isContinuous) Destroy(gameObject);
-        }
+        if (hits > 0 && destroyOnHit && !isContinuous) Destroy(gameObject);
     }
 }

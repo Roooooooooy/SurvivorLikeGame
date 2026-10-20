@@ -19,25 +19,10 @@ public class ProjectileWeapon : WeaponBase
     {
         if (projectilePrefab == null) return;
 
-        // Find nearest enemy
-        GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
-        if (enemies.Length == 0) return;
+        // 从敌人仿真器查最近敌人（O(1) 网格/线性 NativeArray，不再全表扫描 GameObject）
+        if (!EnemySimulation.Instance.FindNearest(transform.position, out Vector2 nearestPos)) return;
 
-        Transform nearest = null;
-        float minDist = float.MaxValue;
-        foreach (var enemy in enemies)
-        {
-            float dist = Vector2.Distance(transform.position, enemy.transform.position);
-            if (dist < minDist)
-            {
-                minDist = dist;
-                nearest = enemy.transform;
-            }
-        }
-
-        if (nearest == null) return;
-
-        Vector2 baseDir = (nearest.position - transform.position).normalized;
+        Vector2 baseDir = (nearestPos - (Vector2)transform.position).normalized;
         float area = Stats != null ? Stats.areaMultiplier : 1f;
 
         for (int i = 0; i < projectileCount; i++)
