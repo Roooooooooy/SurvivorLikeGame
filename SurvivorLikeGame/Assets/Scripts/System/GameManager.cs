@@ -5,10 +5,11 @@ using System.Collections.Generic;
 using TMPro;
 
 // 刷怪表条目：到点解锁，按权重混入刷怪池
+// typeIndex 对应 Resources/EnemyTypes.asset 中的类型下标
 [System.Serializable]
 public class SpawnEntry
 {
-    public GameObject prefab;
+    public int typeIndex;
     public float unlockTime = 0f; // 开局多少秒后加入刷怪池
     public int weight = 10;
 }
@@ -59,6 +60,25 @@ public class GameManager : MonoBehaviour
     {
         if (isGameOver) return;
 
+#if UNITY_EDITOR
+        // 压测：按 F9 在玩家周围爆刷 500 只随机敌人
+        if (UnityEngine.InputSystem.Keyboard.current != null &&
+            UnityEngine.InputSystem.Keyboard.current.f9Key.wasPressedThisFrame)
+        {
+            var p = PlayerController.Instance;
+            if (p != null)
+            {
+                for (int i = 0; i < 500; i++)
+                {
+                    Vector2 d = Random.insideUnitCircle.normalized;
+                    EnemySimulation.Instance.Spawn(
+                        Random.Range(0, EnemySimulation.Instance.TypeCount),
+                        (Vector2)p.transform.position + d * Random.Range(5f, 20f));
+                }
+            }
+        }
+#endif
+
         gameTime += Time.deltaTime;
         UpdateSpawnInterval();
         HandleSpawning();
@@ -94,22 +114,21 @@ public class GameManager : MonoBehaviour
         // 已解锁的敌人按权重随机
         int total = 0;
         foreach (var e in spawnTable)
-            if (e.prefab != null && gameTime >= e.unlockTime) total += e.weight;
+            if (gameTime >= e.unlockTime) total += e.weight;
         if (total == 0) return;
 
         int roll = Random.Range(0, total);
-        GameObject chosen = null;
+        int typeIndex = 0;
         foreach (var e in spawnTable)
         {
-            if (e.prefab == null || gameTime < e.unlockTime) continue;
+            if (gameTime < e.unlockTime) continue;
             roll -= e.weight;
-            if (roll < 0) { chosen = e.prefab; break; }
+            if (roll < 0) { typeIndex = e.typeIndex; break; }
         }
-        if (chosen == null) return;
 
         Vector2 spawnDir = Random.insideUnitCircle.normalized;
         Vector3 spawnPos = player.transform.position + new Vector3(spawnDir.x, spawnDir.y, 0) * spawnRadius;
-        Instantiate(chosen, spawnPos, Quaternion.identity);
+        EnemySimulation.Instance.Spawn(typeIndex, spawnPos);
     }
 
     public void AddKill()
