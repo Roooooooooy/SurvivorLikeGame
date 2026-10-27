@@ -18,13 +18,21 @@ public partial class EnemySimulation : MonoBehaviour
         public float lastTickHit;  // 持续伤害（法球）上次命中时间
         public float animPhase;    // 动画相位（出生随机，避免万怪同帧）
         public float deathTimer;   // 死亡动画倒计时（仅 FLAG_DYING 后有效）
-        public byte flags;         // bit0: flipX  bit1: explodePending  bit2: dying
+        public float fireCooldown; // Ranged 开火冷却，<=0 且玩家在射程内时 Job 写开火请求
+        public byte flags;         // bit0: flipX  bit1: explodePending  bit2: dying  bit3: fireRequest
         public byte alive;
     }
 
     const byte FLAG_FLIPX = 1;
     const byte FLAG_EXPLODE_PENDING = 2;
     const byte FLAG_DYING = 4;
+    const byte FLAG_FIRE_REQUEST = 8; // Burst Job 内不能 Instantiate，只写标记由主线程处理
+
+    const int BEHAVIOR_EXPLODER = 1;
+    const int BEHAVIOR_RANGED = 2;
+
+    // 敌方子弹数量上限：远程怪很多时避免 Instantiate/Draw 无限增长
+    const int MaxEnemyProjectiles = 200;
 
     [Header("打击感")]
     public float knockbackStrength = 4f; // 受击击退初速度
@@ -62,6 +70,15 @@ public partial class EnemySimulation : MonoBehaviour
     NativeArray<float> typeTriggerRange;
     NativeArray<float> typeFuseTime;
     NativeArray<int> typeBehavior;
+    NativeArray<float> typeAttackRange;
+    NativeArray<float> typeFireInterval;
+    NativeArray<float> typeProjectileSpeed;
+    NativeArray<int> typeProjectileDamage;
+
+    // 主线程维护的敌方子弹（只用于数量上限与清理，不进入敌人仿真数组）
+    readonly System.Collections.Generic.List<EnemyProjectile> enemyProjectiles =
+        new System.Collections.Generic.List<EnemyProjectile>();
+    int rangedAliveCount; // 存活远程敌人数：为 0 时跳过每帧开火扫描，避免近战压测额外开销
 
     float maxEnemyRadius;
     bool initialized;
@@ -96,6 +113,10 @@ public partial class EnemySimulation : MonoBehaviour
         typeTriggerRange = new NativeArray<float>(n, Allocator.Persistent);
         typeFuseTime = new NativeArray<float>(n, Allocator.Persistent);
         typeBehavior = new NativeArray<int>(n, Allocator.Persistent);
+        typeAttackRange = new NativeArray<float>(n, Allocator.Persistent);
+        typeFireInterval = new NativeArray<float>(n, Allocator.Persistent);
+        typeProjectileSpeed = new NativeArray<float>(n, Allocator.Persistent);
+        typeProjectileDamage = new NativeArray<int>(n, Allocator.Persistent);
         for (int i = 0; i < n; i++)
         {
             var t = types[i];
@@ -104,6 +125,10 @@ public partial class EnemySimulation : MonoBehaviour
             typeTriggerRange[i] = t.explodeTriggerRange;
             typeFuseTime[i] = t.fuseTime;
             typeBehavior[i] = (int)t.behavior;
+            typeAttackRange[i] = Mathf.Max(0.1f, t.attackRange);
+            typeFireInterval[i] = Mathf.Max(0.1f, t.fireInterval); // 防止 0 间隔导致每帧请求
+            typeProjectileSpeed[i] = t.projectileSpeed;
+            typeProjectileDamage[i] = t.projectileDamage;
             maxEnemyRadius = Mathf.Max(maxEnemyRadius, 0.5f * t.scale);
         }
 
@@ -122,6 +147,11 @@ public partial class EnemySimulation : MonoBehaviour
         typeTriggerRange.Dispose();
         typeFuseTime.Dispose();
         typeBehavior.Dispose();
+        typeAttackRange.Dispose();
+        typeFireInterval.Dispose();
+        typeProjectileSpeed.Dispose();
+        typeProjectileDamage.Dispose();
+        enemyProjectiles.Clear();
         DisposeRenderer();
         if (instance == this) instance = null;
     }
@@ -139,6 +169,7 @@ public partial class EnemySimulation : MonoBehaviour
         // 武器 Update 无论何时运行，拿到的网格和数组都是同一时刻的快照。
         ProcessDeaths();
         RunSimJobs(Time.deltaTime);
+        ProcessRangedFire(player);
 
         // 玩家已死则不再结算接触伤害
         if (GameManager.Instance == null || !GameManager.Instance.isGameOver)
@@ -163,9 +194,15 @@ public partial class EnemySimulation : MonoBehaviour
             lastTickHit = -999f,
             animPhase = UnityEngine.Random.value,
             deathTimer = -1f,
+            // Ranged 出生冷却随机错开，避免整群同一帧齐射
+            fireCooldown = types[typeIndex].behavior == EnemyBehavior.Ranged
+                ? UnityEngine.Random.value * Mathf.Max(0.1f, types[typeIndex].fireInterval)
+                : 0f,
             flags = 0,
             alive = 1,
         });
+
+        if (types[typeIndex].behavior == EnemyBehavior.Ranged) rangedAliveCount++;
     }
 
     // 圆形范围伤害。tick=true 表示持续伤害（同一敌人有命中间隔）。
@@ -229,6 +266,49 @@ public partial class EnemySimulation : MonoBehaviour
 
     // ---------- 内部处理 ----------
 
+    // Ranged 开火：MoveJob 只写 FLAG_FIRE_REQUEST（Burst 内禁止 Instantiate），
+    // 主线程在这里生成子弹并清标记。即使因上限/缺预制体无法生成也要清标记，
+    // 否则限制解除后会一次齐射所有积压请求。
+    void ProcessRangedFire(PlayerController player)
+    {
+        // 清理已回收的子弹引用（命中/寿命到期由 EnemyProjectile 归还对象池，对象仍在但已失活）
+        for (int i = enemyProjectiles.Count - 1; i >= 0; i--)
+        {
+            var p = enemyProjectiles[i];
+            if (p == null || !p.gameObject.activeSelf) enemyProjectiles.RemoveAt(i);
+        }
+
+        if (rangedAliveCount == 0) return;
+
+        var prefab = table.projectilePrefab;
+        bool gameOver = GameManager.Instance != null && GameManager.Instance.isGameOver;
+        float2 pp = (Vector2)player.transform.position;
+
+        for (int i = 0; i < enemies.Length; i++)
+        {
+            var e = enemies[i];
+            if ((e.flags & FLAG_FIRE_REQUEST) == 0) continue;
+
+            e.flags = (byte)(e.flags & ~FLAG_FIRE_REQUEST);
+            enemies[i] = e;
+
+            if (gameOver || prefab == null || enemyProjectiles.Count >= MaxEnemyProjectiles) continue;
+
+            float2 toPlayer = pp - e.position;
+            float dist = math.length(toPlayer);
+            if (dist < 0.01f) continue;
+            float2 dir = toPlayer / dist;
+
+            // 从身体前方一点生成，避免子弹一出生就叠在敌人身上
+            Vector3 spawnPos = new Vector3(e.position.x + dir.x * 0.5f, e.position.y + dir.y * 0.5f, 0f);
+            var go = SmallObjectPool.Spawn(prefab, spawnPos, Quaternion.identity);
+            var proj = go.GetComponent<EnemyProjectile>();
+            if (proj == null) proj = go.AddComponent<EnemyProjectile>();
+            proj.Launch(new Vector2(dir.x, dir.y), typeProjectileSpeed[e.typeIndex], typeProjectileDamage[e.typeIndex]);
+            enemyProjectiles.Add(proj);
+        }
+    }
+
     // 敌人撞玩家：一次圆形查询，护甲/无敌帧仍在 PlayerController.TakeDamage 里
     void ProcessContacts(PlayerController player)
     {
@@ -281,10 +361,14 @@ public partial class EnemySimulation : MonoBehaviour
 
                 if (table.expGemPrefab != null)
                 {
-                    var gemObj = Instantiate(table.expGemPrefab, (Vector2)e.position, Quaternion.identity);
+                    // 经验宝石走对象池：击杀密集时避免大量 Instantiate
+                    var gemObj = SmallObjectPool.Spawn(table.expGemPrefab, (Vector3)(Vector2)e.position, Quaternion.identity);
                     var gem = gemObj.GetComponent<ExpGem>();
                     if (gem != null) gem.expAmount = t.expValue;
                 }
+
+                // 击杀事件交给表现层（音效等）；与宝石掉落一样每只敌人只结算一次
+                CombatEvents.RaiseKill((Vector2)e.position, t.expValue);
 
                 if (GameManager.Instance) GameManager.Instance.AddKill();
 
@@ -296,6 +380,7 @@ public partial class EnemySimulation : MonoBehaviour
             else if (e.deathTimer < 0f)
             {
                 // 阶段 2：动画播完，回收
+                if (types[e.typeIndex].behavior == EnemyBehavior.Ranged) rangedAliveCount--;
                 enemies.RemoveAtSwapBack(i); // 不递增 i，检查换过来的元素
             }
             else i++;

@@ -88,7 +88,34 @@ public class WeaponManager : MonoBehaviour
     {
         if (weapon is OrbWeapon) return WeaponTarget.Orb;
         if (weapon is ProjectileWeapon) return WeaponTarget.Projectile;
-        return WeaponTarget.All;
+        return weapon.target;
+    }
+
+    // 是否已经持有某种武器（按类型判重，同类武器只允许一把）
+    public bool HasWeaponType(System.Type type)
+    {
+        foreach (var w in activeWeapons)
+            if (w != null && w.GetType() == type) return true;
+        return false;
+    }
+
+    // 获得新武器：实例化到玩家身上并注册。新武器从 1 级开始，不追溯已选的通用加成。
+    public WeaponBase GrantWeapon(GameObject prefab)
+    {
+        if (prefab == null) return null;
+        var source = prefab.GetComponent<WeaponBase>();
+        if (source == null)
+        {
+            Debug.LogError("WeaponManager: WeaponGrant 的 prefab 上没有 WeaponBase: " + prefab.name);
+            return null;
+        }
+        if (HasWeaponType(source.GetType())) return null;
+
+        var go = Instantiate(prefab, transform);
+        go.name = prefab.name;
+        var granted = go.GetComponent<WeaponBase>();
+        activeWeapons.Add(granted);
+        return granted;
     }
 
     List<WeaponBase> TargetWeapons(WeaponTarget target)
@@ -107,6 +134,13 @@ public class WeaponManager : MonoBehaviour
 
         foreach (var e in data.effects)
         {
+            if (e.stat == UpgradeStat.WeaponGrant)
+            {
+                if (e.weaponPrefab == null) return false;
+                var granted = e.weaponPrefab.GetComponent<WeaponBase>();
+                if (granted != null && HasWeaponType(granted.GetType())) return false;
+                continue;
+            }
             if (e.stat < UpgradeStat.WeaponDamagePct) continue; // 非武器类效果
             var targets = TargetWeapons(e.weapon);
             if (targets.Count == 0) return false;
@@ -179,7 +213,7 @@ public class WeaponManager : MonoBehaviour
                 foreach (var w in TargetWeapons(e.weapon))
                 {
                     w.damage = Mathf.RoundToInt(w.damage * (1f + e.value));
-                    w.LevelUp();
+                    w.LevelUp(e.stat);
                 }
                 break;
             case UpgradeStat.WeaponCountFlat:
@@ -187,7 +221,7 @@ public class WeaponManager : MonoBehaviour
                 {
                     if (w is OrbWeapon orb) orb.AddOrb();
                     else if (w is ProjectileWeapon proj) proj.projectileCount += (int)e.value;
-                    w.LevelUp();
+                    w.LevelUp(e.stat);
                 }
                 break;
             case UpgradeStat.WeaponSpeedPct:
@@ -195,15 +229,18 @@ public class WeaponManager : MonoBehaviour
                 {
                     if (w is OrbWeapon orb) orb.rotationSpeed *= 1f + e.value;
                     else if (w is ProjectileWeapon proj) proj.projectileSpeed *= 1f + e.value;
-                    w.LevelUp();
+                    w.LevelUp(e.stat);
                 }
                 break;
             case UpgradeStat.WeaponIntervalPct:
                 foreach (var w in TargetWeapons(e.weapon))
                 {
                     w.attackInterval *= 1f - e.value;
-                    w.LevelUp();
+                    w.LevelUp(e.stat);
                 }
+                break;
+            case UpgradeStat.WeaponGrant:
+                GrantWeapon(e.weaponPrefab);
                 break;
         }
     }

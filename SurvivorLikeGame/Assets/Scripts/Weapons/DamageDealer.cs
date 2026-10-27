@@ -2,7 +2,7 @@ using UnityEngine;
 
 // 伤害区域：每帧对敌人仿真器做一次圆形范围查询，替代原来的物理触发器。
 // isContinuous=true（法球）：持续伤害，同一敌人有命中间隔（间隔在 EnemySimulation 上配置）
-// destroyOnHit=true（飞弹）：命中即销毁自身
+// destroyOnHit=true（飞弹）：命中即回收自身（池化对象归还对象池，非池化对象退回 Destroy）
 public class DamageDealer : MonoBehaviour
 {
     public int damage = 10;
@@ -34,6 +34,13 @@ public class DamageDealer : MonoBehaviour
         int dmg = sourceStats != null ? sourceStats.RollDamage(damage) : damage;
         int hits = sim.DamageInCircle(transform.position, radius, dmg, isContinuous);
 
-        if (hits > 0 && destroyOnHit && !isContinuous) Destroy(gameObject);
+        if (hits > 0)
+        {
+            // 命中事件交给表现层（音效/伤害数字/震屏）订阅
+            CombatEvents.RaiseHit(transform.position, dmg);
+
+            // 池化飞弹归还对象池；未池化对象由 Release 内部退回 Destroy，保持旧行为
+            if (destroyOnHit && !isContinuous) SmallObjectPool.Release(gameObject);
+        }
     }
 }

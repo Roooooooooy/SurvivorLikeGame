@@ -35,7 +35,7 @@ public class ProjectileWeapon : WeaponBase
 
             Vector2 dir = Quaternion.Euler(0, 0, currentSpread) * baseDir;
 
-            GameObject proj = Instantiate(projectilePrefab, transform.position, Quaternion.identity);
+            GameObject proj = SmallObjectPool.Spawn(projectilePrefab, transform.position, Quaternion.identity);
             Rigidbody2D rb = proj.GetComponent<Rigidbody2D>();
             if (rb) rb.linearVelocity = dir * projectileSpeed;
 
@@ -59,7 +59,10 @@ public class ProjectileWeapon : WeaponBase
             damageDealer.isContinuous = false;
             damageDealer.SetSourceStats(Stats);
 
-            Destroy(proj, 3f); // Cleanup after 3 seconds
+            // 3 秒兜底寿命交给池化组件统一归还，避免对池对象调用 Destroy
+            var lifetime = proj.GetComponent<PooledLifetime>();
+            if (lifetime == null) lifetime = proj.AddComponent<PooledLifetime>();
+            lifetime.lifetime = 3f;
         }
     }
 }

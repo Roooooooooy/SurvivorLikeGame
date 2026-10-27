@@ -6,7 +6,7 @@ using UnityEngine;
 
 public partial class EnemySimulation
 {
-    // 移动 + 自爆引线 + 朝向：全部并行，5000 只也是亚毫秒级
+    // 移动 + 远程走位/开火请求 + 自爆引线 + 朝向：全部并行，5000 只也是亚毫秒级
     [BurstCompile]
     struct MoveJob : IJobParallelFor
     {
@@ -15,6 +15,8 @@ public partial class EnemySimulation
         [ReadOnly] public NativeArray<int> typeBehavior;
         [ReadOnly] public NativeArray<float> typeTriggerRange;
         [ReadOnly] public NativeArray<float> typeFuseTime;
+        [ReadOnly] public NativeArray<float> typeAttackRange;
+        [ReadOnly] public NativeArray<float> typeFireInterval;
         public float2 playerPos;
         public float deltaTime;
 
@@ -40,19 +42,37 @@ public partial class EnemySimulation
                 e.knockback *= math.max(0f, 1f - 8f * deltaTime);
             }
 
+            int behavior = typeBehavior[e.typeIndex];
+            float speed = typeSpeed[e.typeIndex];
             float2 toPlayer = playerPos - e.position;
             float dist = math.length(toPlayer);
             if (dist > 0.001f)
             {
                 float2 dir = toPlayer / dist;
-                e.position += dir * typeSpeed[e.typeIndex] * deltaTime;
+
+                if (behavior == BEHAVIOR_RANGED)
+                {
+                    // 远程：远于射程压上、近于 70% 射程后撤、射程带内站定，
+                    // 目标是把距离稳在射程边缘（attackRange * 0.7 ~ attackRange）
+                    float attackRange = typeAttackRange[e.typeIndex];
+                    if (dist > attackRange)
+                        e.position += dir * speed * deltaTime;
+                    else if (dist < attackRange * 0.7f)
+                        e.position -= dir * speed * deltaTime;
+                }
+                else
+                {
+                    // Chase / Exploder：原行为，始终朝玩家移动
+                    e.position += dir * speed * deltaTime;
+                }
+
                 if (dir.x != 0f)
                     e.flags = (byte)(dir.x < 0f ? e.flags | FLAG_FLIPX : e.flags & ~FLAG_FLIPX);
             }
 
             if (e.flashTimer > 0f) e.flashTimer -= deltaTime;
 
-            if (typeBehavior[e.typeIndex] == 1) // Exploder
+            if (behavior == BEHAVIOR_EXPLODER) // Exploder
             {
                 if (e.fuseTimer >= 0f)
                 {
@@ -66,6 +86,16 @@ public partial class EnemySimulation
                 else if (dist <= typeTriggerRange[e.typeIndex])
                 {
                     e.fuseTimer = typeFuseTime[e.typeIndex];
+                }
+            }
+            else if (behavior == BEHAVIOR_RANGED)
+            {
+                // 冷却结束且玩家在射程内：只写请求标记，Instantiate 交给主线程
+                if (e.fireCooldown > 0f) e.fireCooldown -= deltaTime;
+                if (e.fireCooldown <= 0f && dist <= typeAttackRange[e.typeIndex])
+                {
+                    e.flags |= FLAG_FIRE_REQUEST;
+                    e.fireCooldown = typeFireInterval[e.typeIndex];
                 }
             }
 
@@ -109,6 +139,8 @@ public partial class EnemySimulation
             typeBehavior = typeBehavior,
             typeTriggerRange = typeTriggerRange,
             typeFuseTime = typeFuseTime,
+            typeAttackRange = typeAttackRange,
+            typeFireInterval = typeFireInterval,
             playerPos = playerPosBuf[0],
             deltaTime = deltaTime,
         };

@@ -7,6 +7,11 @@ public class ExpGem : MonoBehaviour
     
     private Transform targetPlayer = null;
 
+    void OnEnable()
+    {
+        targetPlayer = null; // 池化重生：清掉上一轮的磁吸目标
+    }
+
     void Update()
     {
         if (targetPlayer != null)
@@ -28,7 +33,8 @@ public class ExpGem : MonoBehaviour
             if (p != null)
             {
                 p.GainExp(expAmount);
-                Destroy(gameObject);
+                CombatEvents.RaisePickup(transform.position, expAmount); // 拾取事件交给表现层
+                SmallObjectPool.Release(gameObject); // 归还对象池，替代 Destroy
             }
         }
     }

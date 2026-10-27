@@ -18,6 +18,7 @@ public enum UpgradeStat
     WeaponCountFlat = 11,      // 指定武器数量（加算）
     WeaponSpeedPct = 12,       // 指定武器速度（乘算：法球转速/飞弹速度）
     WeaponIntervalPct = 13,    // 指定武器攻击间隔（乘算缩减）
+    WeaponGrant = 14,          // 获得新武器：使用 UpgradeEffect.weaponPrefab
 }
 
 public enum WeaponTarget
@@ -25,6 +26,10 @@ public enum WeaponTarget
     All = 0,
     Orb = 1,
     Projectile = 2,
+    Pierce = 3,      // 穿透箭
+    Lightning = 4,   // 闪电链
+    Nova = 5,        // 新星爆发
+    Boomerang = 6,   // 回旋镖
 }
 
 [System.Serializable]
@@ -33,6 +38,7 @@ public class UpgradeEffect
     public UpgradeStat stat;
     public float value;
     public WeaponTarget weapon = WeaponTarget.All; // 仅武器类效果使用
+    public GameObject weaponPrefab;                // 仅 WeaponGrant 使用：要授予的武器 prefab
 }
 
 [CreateAssetMenu(fileName = "UpgradeData", menuName = "Survivor/Upgrade Data")]

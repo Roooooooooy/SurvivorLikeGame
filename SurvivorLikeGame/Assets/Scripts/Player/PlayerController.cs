@@ -89,6 +89,9 @@ public class PlayerController : MonoBehaviour
         currentHealth -= damage;
         invincibleTimer = invincibleDuration;
 
+        // 受击音效（无敌帧内已提前返回，不会重复播放）
+        AudioManager.Instance.PlayHurt(transform.position);
+
         // Flash effect
         StartCoroutine(FlashRed());
 
@@ -139,6 +142,8 @@ public class PlayerController : MonoBehaviour
         expToNextLevel = Mathf.RoundToInt(expToNextLevel * 1.2f);
         // Restore some health on level up
         currentHealth = Mathf.Min(currentHealth + 20, maxHealth);
+
+        AudioManager.Instance.PlayLevelUp(transform.position);
 
         if (weaponManager) weaponManager.ShowUpgradeOptions();
     }
