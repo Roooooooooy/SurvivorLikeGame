@@ -34,7 +34,11 @@ public class WeaponManager : MonoBehaviour
 
         var option = pendingOptions[index];
         if (option.IsEvolution)
+        {
+            // 进化时扣除 Boss 材料；0 材料门槛的旧配方行为不变
+            if (!PlayerProgress.ConsumeBossMaterials(option.evolution.requiredBossMaterials)) return;
             option.evolveTarget.Evolve(option.evolution);
+        }
         else
             ApplyUpgrade(option.upgrade);
 
@@ -54,9 +58,17 @@ public class WeaponManager : MonoBehaviour
                 {
                     if (recipe.baseWeapon != TargetOf(weapon)) continue;
                     if (!stacks.ContainsKey(recipe.requiredUpgradeId)) continue;
+                    // 材料不足时，需要 Boss 材料的进化选项不出现
+                    if (PlayerProgress.BossMaterials < recipe.requiredBossMaterials) continue;
+
+                    string label = "EVOLVE: " + recipe.displayName;
+                    // 需要材料时在名字后标出进度（升级 UI 只显示 displayName）
+                    if (recipe.requiredBossMaterials > 0)
+                        label += "（材料 " + PlayerProgress.BossMaterials + "/" + recipe.requiredBossMaterials + "）";
+
                     options.Add(new UpgradeOption
                     {
-                        displayName = "EVOLVE: " + recipe.displayName,
+                        displayName = label,
                         description = recipe.description,
                         evolution = recipe,
                         evolveTarget = weapon,
