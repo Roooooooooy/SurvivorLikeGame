@@ -506,17 +506,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 2526705822991320777, guid: 047185c88b29c7b4faaa4d06768dfe95, type: 3}
   m_PrefabInstance: {fileID: 163628121}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &163628123 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 2526705823807390541, guid: 047185c88b29c7b4faaa4d06768dfe95, type: 3}
-  m_PrefabInstance: {fileID: 163628121}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &163628124 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 2526705822991320776, guid: 047185c88b29c7b4faaa4d06768dfe95, type: 3}
@@ -821,8 +810,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 0.545, g: 0, b: 0, a: 1}
   m_RaycastTarget: 0
@@ -844,7 +833,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: 'YOU DIED'
+  m_Text: YOU DIED
 --- !u!222 &435862169
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1303,17 +1292,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 2526705822991320777, guid: 047185c88b29c7b4faaa4d06768dfe95, type: 3}
   m_PrefabInstance: {fileID: 899494588}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &899494590 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 2526705823807390541, guid: 047185c88b29c7b4faaa4d06768dfe95, type: 3}
-  m_PrefabInstance: {fileID: 899494588}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &899494591 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 2526705822991320776, guid: 047185c88b29c7b4faaa4d06768dfe95, type: 3}
@@ -1447,17 +1425,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 2526705822991320777, guid: 047185c88b29c7b4faaa4d06768dfe95, type: 3}
   m_PrefabInstance: {fileID: 960459277}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &960459279 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 2526705823807390541, guid: 047185c88b29c7b4faaa4d06768dfe95, type: 3}
-  m_PrefabInstance: {fileID: 960459277}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &960459280 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 2526705822991320776, guid: 047185c88b29c7b4faaa4d06768dfe95, type: 3}
@@ -1622,6 +1589,9 @@ MonoBehaviour:
   - typeIndex: 4
     unlockTime: 180
     weight: 5
+  - typeIndex: 5
+    unlockTime: 150
+    weight: 4
   spawnRadius: 15
   baseSpawnInterval: 2
   minSpawnInterval: 0.3
@@ -1635,9 +1605,9 @@ MonoBehaviour:
   - {fileID: 163628124}
   - {fileID: 899494591}
   upgradeButtonTexts:
-  - {fileID: 960459279}
-  - {fileID: 163628123}
-  - {fileID: 899494590}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
 --- !u!4 &1026073038
 Transform:
   m_ObjectHideFlags: 0
@@ -2664,6 +2634,51 @@ MonoBehaviour:
     m_VerticalOverflow: 0
     m_LineSpacing: 1
   m_Text: PRESS ANY KEY
+--- !u!1 &9500000901
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 9500000902}
+  - component: {fileID: 435862168}
+  - component: {fileID: 9500000903}
+  m_Layer: 5
+  m_Name: DeathTitle
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &9500000902
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9500000901}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 435862167}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &9500000903
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9500000901}
+  m_CullTransparentMesh: 1
 --- !u!1001 &282770539016943222
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2725,51 +2740,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 7b4ce8f55258e764a97140769fa8b8c1, type: 3}
---- !u!1 &9500000901
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 9500000902}
-  - component: {fileID: 435862168}
-  - component: {fileID: 9500000903}
-  m_Layer: 5
-  m_Name: DeathTitle
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &9500000902
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9500000901}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 435862167}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!222 &9500000903
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9500000901}
-  m_CullTransparentMesh: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
