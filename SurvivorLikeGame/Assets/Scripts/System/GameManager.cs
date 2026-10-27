@@ -194,8 +194,11 @@ public class GameManager : MonoBehaviour
     public void GameOver()
     {
         Debug.Log("[GameManager] GameOver 触发，gameOverPanel=" + (gameOverPanel != null));
+        // 立即结算本局：保证玩家在死亡演出期间就按 R 重开也不会漏记金币。
+        // RunStats.FinalizeRun 幂等，结算界面再次调用不会重复入账。
+        RunStats.FinalizeRun();
         isGameOver = true;
-        // 黑魂式死亡：不暂停时间，怪继续移动；YOU DIED 演出后自动回主页
+        // 黑魂式死亡：不暂停时间，怪继续移动；YOU DIED 演出结束后进入本局结算
         Time.timeScale = 1f;
         if (levelUpPanel) levelUpPanel.SetActive(false);
         if (gameOverPanel) gameOverPanel.SetActive(true);
