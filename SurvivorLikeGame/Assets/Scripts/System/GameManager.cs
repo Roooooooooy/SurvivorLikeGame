@@ -206,18 +206,31 @@ public class GameManager : MonoBehaviour
         if (isGameOver) return;
         Time.timeScale = 0f;
         if (levelUpPanel) levelUpPanel.SetActive(true);
+        if (upgradeButtons == null) return;
         for (int i = 0; i < upgradeButtons.Length; i++)
         {
             if (i < options.Count)
             {
                 upgradeButtons[i].gameObject.SetActive(true);
-                if (upgradeButtonTexts[i]) upgradeButtonTexts[i].text = options[i].displayName;
+                var label = ButtonLabel(i);
+                if (label != null) label.text = options[i].displayName;
             }
             else
             {
                 upgradeButtons[i].gameObject.SetActive(false);
             }
         }
+    }
+
+    // 兼容旧场景：序列化的 upgradeButtonTexts 可能为空（TMP → legacy Text 迁移遗留），
+    // 此时直接取按钮子节点上的 Text，避免升级选项文字不显示。
+    Text ButtonLabel(int i)
+    {
+        if (upgradeButtonTexts != null && i < upgradeButtonTexts.Length && upgradeButtonTexts[i] != null)
+            return upgradeButtonTexts[i];
+        if (upgradeButtons != null && i < upgradeButtons.Length && upgradeButtons[i] != null)
+            return upgradeButtons[i].GetComponentInChildren<Text>(true);
+        return null;
     }
 
     public void HideLevelUp()

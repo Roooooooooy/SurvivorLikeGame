@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ed372765fb948d5991366ccb57317bb, type: 3}
+  m_Name: up_boomerang_grant
+  m_EditorClassIdentifier: Assembly-CSharp::UpgradeData
+  id: boomerang_grant
+  displayName: Acquire Boomerang
+  description: Unlock Boomerang as a new weapon
+  weight: 5
+  maxStack: 1
+  effects:
+  - stat: 14
+    value: 0
+    weapon: 6
+    weaponPrefab: {fileID: 2789376041400687150, guid: ad19782c5ee664e2fb465bccf7f9d801, type: 3}

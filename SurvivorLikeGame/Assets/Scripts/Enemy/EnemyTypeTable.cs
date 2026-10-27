@@ -5,6 +5,7 @@ public enum EnemyBehavior
 {
     Chase = 0,     // 追踪 + 接触伤害
     Exploder = 1,  // 贴近玩家后引燃，延时范围爆炸
+    Ranged = 2,    // 远程：保持射程边缘，周期发射子弹
 }
 
 // 敌人类型数据：所有数值在 EnemyTypes 资产（Resources/EnemyTypes.asset）里配置
@@ -24,6 +25,12 @@ public class EnemyTypeData
     public float explodeRadius = 2.5f;
     public float fuseTime = 0.6f;
 
+    [Header("远程（behavior = Ranged 时生效）")]
+    public float attackRange = 7f;        // 开火距离；也是敌人试图保持的距离
+    public float fireInterval = 2f;       // 开火间隔（秒）
+    public float projectileSpeed = 6f;    // 子弹飞行速度
+    public int projectileDamage = 8;      // 子弹命中伤害
+
     [Header("动画")]
     public int animFrames = 1;      // 图集横向帧数，1 = 静态
     public float animFps = 10f;
@@ -34,5 +41,6 @@ public class EnemyTypeData
 public class EnemyTypeTable : ScriptableObject
 {
     public GameObject expGemPrefab;
+    public GameObject projectilePrefab; // Ranged 敌人子弹的预制体（EnemyProjectile）
     public List<EnemyTypeData> types = new List<EnemyTypeData>();
 }
