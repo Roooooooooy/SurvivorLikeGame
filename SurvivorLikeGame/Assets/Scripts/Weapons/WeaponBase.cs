@@ -7,6 +7,9 @@ public abstract class WeaponBase : MonoBehaviour
     public int level = 1;
     public int maxLevel = 5;
     public bool evolved = false;
+    // 升级归类：新武器在子类里把 target 设成自己的 WeaponTarget，
+    // 升级池/进化配方才能精确匹配（法球、飞弹仍由 TargetOf 里的类型判断兜底）。
+    public WeaponTarget target = WeaponTarget.All;
     protected float attackTimer = 0f;
 
     private PlayerStats stats;
@@ -34,12 +37,17 @@ public abstract class WeaponBase : MonoBehaviour
         {
             attackTimer = 0f;
             Attack();
+            // 发射音效统一在攻击之后播放，OrbWeapon 重写了 Update 不走这里
+            AudioManager.Instance.PlayShoot(transform.position);
         }
     }
 
     protected abstract void Attack();
 
     public virtual void LevelUp() => level++;
+
+    // 带升级类型：子类可据此区分“伤害/数量/速度/间隔”升级，避免靠字段变化猜测
+    public virtual void LevelUp(UpgradeStat stat) => LevelUp();
 
     public virtual void Evolve(EvolutionRecipe recipe)
     {
