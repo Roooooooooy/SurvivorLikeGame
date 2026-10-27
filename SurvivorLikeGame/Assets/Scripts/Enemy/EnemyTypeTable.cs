@@ -54,6 +54,7 @@ public class EnemyTypeData
 public class EnemyTypeTable : ScriptableObject
 {
     public GameObject expGemPrefab;
+    public GameObject coinPrefab; // 击杀掉落的金币预制体（CoinPickup）
     public GameObject projectilePrefab; // Ranged 敌人子弹的预制体（EnemyProjectile）
     public List<EnemyTypeData> types = new List<EnemyTypeData>();
 }

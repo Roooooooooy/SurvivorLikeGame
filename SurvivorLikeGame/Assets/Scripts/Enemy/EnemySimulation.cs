@@ -42,6 +42,11 @@ public partial class EnemySimulation : MonoBehaviour
     // 敌方子弹数量上限：远程怪很多时避免 Instantiate/Draw 无限增长
     const int MaxEnemyProjectiles = 200;
 
+    // 金币掉落规则：Boss 必掉多枚，精英高概率掉多枚，普通怪低概率掉单枚
+    const float EliteCoinHealthThreshold = 200f; // 生命值达到该值视为精英（Elite）
+    const float NormalCoinDropChance = 0.2f;
+    const float EliteCoinDropChance = 0.75f;
+
     [Header("打击感")]
     public float knockbackStrength = 4f; // 受击击退初速度
 
@@ -405,6 +410,46 @@ public partial class EnemySimulation : MonoBehaviour
         }
     }
 
+    // 金币掉落：按敌人档次决定数量/面值。生成位置沿用对象池，与经验宝石同一套回收路径。
+    void DropCoins(Vector2 pos, EnemyTypeData t)
+    {
+        var prefab = table.coinPrefab;
+        if (prefab == null) return;
+
+        int count;
+        int value;
+        if (t.behavior == EnemyBehavior.Boss)
+        {
+            count = UnityEngine.Random.Range(6, 9); // Boss 必掉多枚
+            value = 3;
+        }
+        else if (t.maxHealth >= EliteCoinHealthThreshold)
+        {
+            if (UnityEngine.Random.value > EliteCoinDropChance) return;
+            count = UnityEngine.Random.Range(2, 5);
+            value = 2;
+        }
+        else
+        {
+            if (UnityEngine.Random.value > NormalCoinDropChance) return;
+            count = 1;
+            value = 1;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            // 多枚金币沿小圆环散开，避免完全重叠成一枚
+            float angle = count > 1 ? i * Mathf.PI * 2f / count : 0f;
+            Vector3 offset = count > 1
+                ? new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * 0.3f
+                : Vector3.zero;
+            var coinObj = SmallObjectPool.Spawn(prefab, (Vector3)pos + offset, Quaternion.identity);
+            if (coinObj == null) continue;
+            var coin = coinObj.GetComponent<CoinPickup>();
+            if (coin != null) coin.value = value;
+        }
+    }
+
     // 死亡两阶段处理：
     // 1. 逻辑结算（掉宝石/计数/自爆伤害）→ 标记 DYING，进入死亡动画期
     // 2. 死亡动画播完（deathTimer 归零）→ swap-remove 真正回收
@@ -438,6 +483,8 @@ public partial class EnemySimulation : MonoBehaviour
                     var gem = gemObj.GetComponent<ExpGem>();
                     if (gem != null) gem.expAmount = t.expValue;
                 }
+
+                DropCoins((Vector2)e.position, t);
 
                 // 击杀事件交给表现层（音效等）；与宝石掉落一样每只敌人只结算一次
                 CombatEvents.RaiseKill((Vector2)e.position, t.expValue);

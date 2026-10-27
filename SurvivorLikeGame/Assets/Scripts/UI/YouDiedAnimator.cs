@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using System.Collections;
 
 // 黑魂风死亡演出：低沉钟声 → "YOU DIED" 从黑暗中缓慢浮现 → 重开按钮延迟出现
-// → 停留片刻自动回主页。死亡期间保持模拟运行，全程 unscaled 时间。
+// → 停留片刻后进入本局结算界面。死亡期间保持模拟运行，全程 unscaled 时间。
 [RequireComponent(typeof(Image))]
 public class YouDiedAnimator : MonoBehaviour
 {
@@ -12,6 +12,7 @@ public class YouDiedAnimator : MonoBehaviour
     public float scrimMaxAlpha = 0.85f;
     public float buttonDelay = 2.0f;     // 重开按钮延迟出现
     public float holdDuration = 2.0f;    // 淡入完成后停留时长
+    // 字段名保留以兼容场景序列化；语义已改为「死亡演出结束后进入本局结算」
     public bool autoReturnToTitle = true;
 
     private Image scrim;
@@ -75,7 +76,7 @@ public class YouDiedAnimator : MonoBehaviour
         title.color = titleColor;
         if (restartButton != null) restartButton.SetActive(true);
 
-        // 停留片刻后自动回主页（场景重载会显示首页）
+        // 停留片刻后进入本局结算界面；重开交给结算界面的 R 键 / 按钮
         if (autoReturnToTitle)
         {
             float hold = 0f;
@@ -84,7 +85,7 @@ public class YouDiedAnimator : MonoBehaviour
                 hold += Time.unscaledDeltaTime;
                 yield return null;
             }
-            if (GameManager.Instance != null) GameManager.Instance.RestartGame();
+            SettlementScreen.ShowRunSummary();
         }
     }
 }

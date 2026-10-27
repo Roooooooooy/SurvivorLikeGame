@@ -26,6 +26,14 @@ public class ExpPickupRadius : MonoBehaviour
             {
                 gem.SetTarget(transform);
             }
+            return;
+        }
+
+        // 金币复用同一拾取半径：进入范围后开始磁吸
+        var coin = other.GetComponent<CoinPickup>();
+        if (coin != null)
+        {
+            coin.SetTarget(transform);
         }
     }
 }

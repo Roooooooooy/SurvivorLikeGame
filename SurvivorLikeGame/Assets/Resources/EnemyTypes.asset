@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: EnemyTypes
   m_EditorClassIdentifier: 
   expGemPrefab: {fileID: 7740904159132858243, guid: 83fed91490029c948850985070e5bcee, type: 3}
+  coinPrefab: {fileID: 6613552674270726572, guid: de4de2d3d9b564f8ea2e1a19a2b0d4dc, type: 3}
   projectilePrefab: {fileID: 2896620411079452960, guid: 448c318099b8e400eadcb912a5d68968, type: 3}
   types:
   - typeName: NormalA
