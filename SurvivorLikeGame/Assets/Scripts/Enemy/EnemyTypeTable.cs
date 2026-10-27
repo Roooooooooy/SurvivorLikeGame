@@ -6,6 +6,7 @@ public enum EnemyBehavior
     Chase = 0,     // 追踪 + 接触伤害
     Exploder = 1,  // 贴近玩家后引燃，延时范围爆炸
     Ranged = 2,    // 远程：保持射程边缘，周期发射子弹
+    Boss = 3,      // 多阶段 Boss：按血量分阶段，阶段 2/3 追加冲锋与环形弹幕
 }
 
 // 敌人类型数据：所有数值在 EnemyTypes 资产（Resources/EnemyTypes.asset）里配置
@@ -30,6 +31,18 @@ public class EnemyTypeData
     public float fireInterval = 2f;       // 开火间隔（秒）
     public float projectileSpeed = 6f;    // 子弹飞行速度
     public int projectileDamage = 8;      // 子弹命中伤害
+
+    [Header("Boss（behavior = Boss 时生效）")]
+    public int bossPhaseCount = 3;            // 总阶段数（1 表示不分阶段，不会触发冲锋/弹幕）
+    public float bossPhase2Pct = 0.66f;       // 血量比例降到该值进入阶段 2
+    public float bossPhase3Pct = 0.33f;       // 血量比例降到该值进入阶段 3
+    public float bossChargeInterval = 5f;     // 冲锋间隔（秒）
+    public float bossChargeDuration = 0.6f;   // 单次冲锋持续（秒）
+    public float bossChargeSpeedMultiplier = 3.5f; // 冲锋期间移速倍率
+    public float bossBarrageInterval = 3f;    // 弹幕间隔（秒）
+    public int bossBarrageCount = 12;         // 每轮弹幕数量（环形均匀铺开）
+    public float bossBarrageSpeed = 5f;       // 弹幕飞行速度
+    public int bossBarrageDamage = 12;        // 弹幕命中伤害
 
     [Header("动画")]
     public int animFrames = 1;      // 图集横向帧数，1 = 静态

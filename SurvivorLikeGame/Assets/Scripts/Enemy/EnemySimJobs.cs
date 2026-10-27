@@ -17,6 +17,10 @@ public partial class EnemySimulation
         [ReadOnly] public NativeArray<float> typeFuseTime;
         [ReadOnly] public NativeArray<float> typeAttackRange;
         [ReadOnly] public NativeArray<float> typeFireInterval;
+        [ReadOnly] public NativeArray<float> typeBossChargeInterval;
+        [ReadOnly] public NativeArray<float> typeBossChargeDuration;
+        [ReadOnly] public NativeArray<float> typeBossChargeSpeedMultiplier;
+        [ReadOnly] public NativeArray<float> typeBossBarrageInterval;
         public float2 playerPos;
         public float deltaTime;
 
@@ -46,6 +50,50 @@ public partial class EnemySimulation
             float speed = typeSpeed[e.typeIndex];
             float2 toPlayer = playerPos - e.position;
             float dist = math.length(toPlayer);
+
+            // Boss 阶段计时全部在 Job 内并行递减，主线程只按血量同步阶段。
+            // 阶段 1 只逼近玩家；阶段 2/3 才会周期触发冲锋与弹幕。
+            float bossSpeedMul = 1f;
+            if (behavior == BEHAVIOR_BOSS)
+            {
+                if (e.bossPhase >= 2)
+                {
+                    if (e.chargeTimer > 0f)
+                    {
+                        // 冲锋中：剩余时间递减，移速乘倍率
+                        e.chargeTimer -= deltaTime;
+                        bossSpeedMul = typeBossChargeSpeedMultiplier[e.typeIndex];
+                        if (e.chargeTimer <= 0f)
+                            e.flags = (byte)(e.flags & ~FLAG_CHARGING);
+                    }
+                    else
+                    {
+                        if (e.chargeCooldown > 0f) e.chargeCooldown -= deltaTime;
+                        if (e.chargeCooldown <= 0f)
+                        {
+                            e.chargeTimer = typeBossChargeDuration[e.typeIndex];
+                            e.chargeCooldown = typeBossChargeInterval[e.typeIndex];
+                            e.flags |= FLAG_CHARGING;
+                            bossSpeedMul = typeBossChargeSpeedMultiplier[e.typeIndex];
+                        }
+                    }
+
+                    // 弹幕：到点只写请求标记，Instantiate 交给主线程
+                    if (e.barrageCooldown > 0f) e.barrageCooldown -= deltaTime;
+                    if (e.barrageCooldown <= 0f)
+                    {
+                        e.flags |= FLAG_BARRAGE_REQUEST;
+                        e.barrageCooldown = typeBossBarrageInterval[e.typeIndex];
+                    }
+                }
+                else
+                {
+                    // 阶段 1 不积累冲锋/弹幕冷却
+                    e.chargeTimer = 0f;
+                    e.flags = (byte)(e.flags & ~FLAG_CHARGING);
+                }
+            }
+
             if (dist > 0.001f)
             {
                 float2 dir = toPlayer / dist;
@@ -59,6 +107,11 @@ public partial class EnemySimulation
                         e.position += dir * speed * deltaTime;
                     else if (dist < attackRange * 0.7f)
                         e.position -= dir * speed * deltaTime;
+                }
+                else if (behavior == BEHAVIOR_BOSS)
+                {
+                    // Boss：始终朝玩家移动，冲锋期间按倍率加速
+                    e.position += dir * speed * bossSpeedMul * deltaTime;
                 }
                 else
                 {
@@ -141,6 +194,10 @@ public partial class EnemySimulation
             typeFuseTime = typeFuseTime,
             typeAttackRange = typeAttackRange,
             typeFireInterval = typeFireInterval,
+            typeBossChargeInterval = typeBossChargeInterval,
+            typeBossChargeDuration = typeBossChargeDuration,
+            typeBossChargeSpeedMultiplier = typeBossChargeSpeedMultiplier,
+            typeBossBarrageInterval = typeBossBarrageInterval,
             playerPos = playerPosBuf[0],
             deltaTime = deltaTime,
         };

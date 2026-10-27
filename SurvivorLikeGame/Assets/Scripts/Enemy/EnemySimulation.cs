@@ -19,7 +19,12 @@ public partial class EnemySimulation : MonoBehaviour
         public float animPhase;    // 动画相位（出生随机，避免万怪同帧）
         public float deathTimer;   // 死亡动画倒计时（仅 FLAG_DYING 后有效）
         public float fireCooldown; // Ranged 开火冷却，<=0 且玩家在射程内时 Job 写开火请求
+        public byte bossPhase;     // Boss 当前阶段（1..phaseCount），非 Boss 恒为 0
+        public float chargeTimer;  // Boss 冲锋剩余时间，>0 表示正在冲锋
+        public float chargeCooldown; // Boss 下次冲锋冷却
+        public float barrageCooldown; // Boss 下次弹幕冷却
         public byte flags;         // bit0: flipX  bit1: explodePending  bit2: dying  bit3: fireRequest
+                                   // bit4: charging  bit5: barrageRequest
         public byte alive;
     }
 
@@ -27,9 +32,12 @@ public partial class EnemySimulation : MonoBehaviour
     const byte FLAG_EXPLODE_PENDING = 2;
     const byte FLAG_DYING = 4;
     const byte FLAG_FIRE_REQUEST = 8; // Burst Job 内不能 Instantiate，只写标记由主线程处理
+    const byte FLAG_CHARGING = 16;    // Boss 冲锋中（供渲染/表现层读取）
+    const byte FLAG_BARRAGE_REQUEST = 32; // Boss 弹幕请求，同样由主线程生成子弹
 
     const int BEHAVIOR_EXPLODER = 1;
     const int BEHAVIOR_RANGED = 2;
+    const int BEHAVIOR_BOSS = 3;
 
     // 敌方子弹数量上限：远程怪很多时避免 Instantiate/Draw 无限增长
     const int MaxEnemyProjectiles = 200;
@@ -75,10 +83,23 @@ public partial class EnemySimulation : MonoBehaviour
     NativeArray<float> typeProjectileSpeed;
     NativeArray<int> typeProjectileDamage;
 
+    // Boss 参数的 job/主线程副本
+    NativeArray<int> typeBossPhaseCount;
+    NativeArray<float> typeBossPhase2Pct;
+    NativeArray<float> typeBossPhase3Pct;
+    NativeArray<float> typeBossChargeInterval;
+    NativeArray<float> typeBossChargeDuration;
+    NativeArray<float> typeBossChargeSpeedMultiplier;
+    NativeArray<float> typeBossBarrageInterval;
+    NativeArray<int> typeBossBarrageCount;
+    NativeArray<float> typeBossBarrageSpeed;
+    NativeArray<int> typeBossBarrageDamage;
+
     // 主线程维护的敌方子弹（只用于数量上限与清理，不进入敌人仿真数组）
     readonly System.Collections.Generic.List<EnemyProjectile> enemyProjectiles =
         new System.Collections.Generic.List<EnemyProjectile>();
     int rangedAliveCount; // 存活远程敌人数：为 0 时跳过每帧开火扫描，避免近战压测额外开销
+    int bossAliveCount;   // 存活（含死亡动画期）Boss 数：为 0 时跳过每帧 Boss 扫描
 
     float maxEnemyRadius;
     bool initialized;
@@ -117,6 +138,16 @@ public partial class EnemySimulation : MonoBehaviour
         typeFireInterval = new NativeArray<float>(n, Allocator.Persistent);
         typeProjectileSpeed = new NativeArray<float>(n, Allocator.Persistent);
         typeProjectileDamage = new NativeArray<int>(n, Allocator.Persistent);
+        typeBossPhaseCount = new NativeArray<int>(n, Allocator.Persistent);
+        typeBossPhase2Pct = new NativeArray<float>(n, Allocator.Persistent);
+        typeBossPhase3Pct = new NativeArray<float>(n, Allocator.Persistent);
+        typeBossChargeInterval = new NativeArray<float>(n, Allocator.Persistent);
+        typeBossChargeDuration = new NativeArray<float>(n, Allocator.Persistent);
+        typeBossChargeSpeedMultiplier = new NativeArray<float>(n, Allocator.Persistent);
+        typeBossBarrageInterval = new NativeArray<float>(n, Allocator.Persistent);
+        typeBossBarrageCount = new NativeArray<int>(n, Allocator.Persistent);
+        typeBossBarrageSpeed = new NativeArray<float>(n, Allocator.Persistent);
+        typeBossBarrageDamage = new NativeArray<int>(n, Allocator.Persistent);
         for (int i = 0; i < n; i++)
         {
             var t = types[i];
@@ -129,6 +160,17 @@ public partial class EnemySimulation : MonoBehaviour
             typeFireInterval[i] = Mathf.Max(0.1f, t.fireInterval); // 防止 0 间隔导致每帧请求
             typeProjectileSpeed[i] = t.projectileSpeed;
             typeProjectileDamage[i] = t.projectileDamage;
+            // Boss 参数做下限保护：0 间隔会导致每帧请求，0 阶段数会让 UI 阶段失效
+            typeBossPhaseCount[i] = Mathf.Max(1, t.bossPhaseCount);
+            typeBossPhase2Pct[i] = t.bossPhase2Pct;
+            typeBossPhase3Pct[i] = t.bossPhase3Pct;
+            typeBossChargeInterval[i] = Mathf.Max(0.1f, t.bossChargeInterval);
+            typeBossChargeDuration[i] = Mathf.Max(0.05f, t.bossChargeDuration);
+            typeBossChargeSpeedMultiplier[i] = Mathf.Max(1f, t.bossChargeSpeedMultiplier);
+            typeBossBarrageInterval[i] = Mathf.Max(0.1f, t.bossBarrageInterval);
+            typeBossBarrageCount[i] = Mathf.Max(1, t.bossBarrageCount);
+            typeBossBarrageSpeed[i] = Mathf.Max(0.1f, t.bossBarrageSpeed);
+            typeBossBarrageDamage[i] = Mathf.Max(1, t.bossBarrageDamage);
             maxEnemyRadius = Mathf.Max(maxEnemyRadius, 0.5f * t.scale);
         }
 
@@ -151,8 +193,20 @@ public partial class EnemySimulation : MonoBehaviour
         typeFireInterval.Dispose();
         typeProjectileSpeed.Dispose();
         typeProjectileDamage.Dispose();
+        typeBossPhaseCount.Dispose();
+        typeBossPhase2Pct.Dispose();
+        typeBossPhase3Pct.Dispose();
+        typeBossChargeInterval.Dispose();
+        typeBossChargeDuration.Dispose();
+        typeBossChargeSpeedMultiplier.Dispose();
+        typeBossBarrageInterval.Dispose();
+        typeBossBarrageCount.Dispose();
+        typeBossBarrageSpeed.Dispose();
+        typeBossBarrageDamage.Dispose();
         enemyProjectiles.Clear();
         DisposeRenderer();
+        // 场景卸载/退出 Play：静默关闭 Boss 状态（不触发击杀奖励）
+        BossStatus.Despawn();
         if (instance == this) instance = null;
     }
 
@@ -170,6 +224,7 @@ public partial class EnemySimulation : MonoBehaviour
         ProcessDeaths();
         RunSimJobs(Time.deltaTime);
         ProcessRangedFire(player);
+        ProcessBoss();
 
         // 玩家已死则不再结算接触伤害
         if (GameManager.Instance == null || !GameManager.Instance.isGameOver)
@@ -184,6 +239,9 @@ public partial class EnemySimulation : MonoBehaviour
         if ((uint)typeIndex >= (uint)types.Count) return;
         if (enemies.Length >= maxEnemies) return;
 
+        var type = types[typeIndex];
+        bool isBoss = type.behavior == EnemyBehavior.Boss;
+
         enemies.Add(new EnemyData
         {
             position = pos,
@@ -195,14 +253,25 @@ public partial class EnemySimulation : MonoBehaviour
             animPhase = UnityEngine.Random.value,
             deathTimer = -1f,
             // Ranged 出生冷却随机错开，避免整群同一帧齐射
-            fireCooldown = types[typeIndex].behavior == EnemyBehavior.Ranged
-                ? UnityEngine.Random.value * Mathf.Max(0.1f, types[typeIndex].fireInterval)
+            fireCooldown = type.behavior == EnemyBehavior.Ranged
+                ? UnityEngine.Random.value * Mathf.Max(0.1f, type.fireInterval)
                 : 0f,
+            bossPhase = isBoss ? (byte)1 : (byte)0,
+            chargeTimer = 0f,
+            // 首次冲锋/弹幕都从完整间隔开始，进入阶段 2 后不会立刻触发
+            chargeCooldown = isBoss ? Mathf.Max(0.1f, type.bossChargeInterval) : 0f,
+            barrageCooldown = isBoss ? Mathf.Max(0.1f, type.bossBarrageInterval) : 0f,
             flags = 0,
             alive = 1,
         });
 
-        if (types[typeIndex].behavior == EnemyBehavior.Ranged) rangedAliveCount++;
+        if (type.behavior == EnemyBehavior.Ranged) rangedAliveCount++;
+        if (isBoss)
+        {
+            bossAliveCount++;
+            // 同步 Boss 状态总线，供血条 UI / 奖励系统读取
+            BossStatus.Spawn(type.typeName, type.maxHealth, Mathf.Max(1, type.bossPhaseCount));
+        }
     }
 
     // 圆形范围伤害。tick=true 表示持续伤害（同一敌人有命中间隔）。
@@ -353,6 +422,9 @@ public partial class EnemySimulation : MonoBehaviour
                 // 阶段 1：逻辑结算
                 var t = types[e.typeIndex];
 
+                // Boss 击杀：BossStatus.Kill 内部有 Active 守卫，只会触发一次 BossKilled
+                if (t.behavior == EnemyBehavior.Boss) BossStatus.Kill();
+
                 if ((e.flags & FLAG_EXPLODE_PENDING) != 0 && player != null)
                 {
                     if (Vector2.Distance((Vector2)e.position, player.transform.position) <= t.explodeRadius)
@@ -381,6 +453,7 @@ public partial class EnemySimulation : MonoBehaviour
             {
                 // 阶段 2：动画播完，回收
                 if (types[e.typeIndex].behavior == EnemyBehavior.Ranged) rangedAliveCount--;
+                if (types[e.typeIndex].behavior == EnemyBehavior.Boss) bossAliveCount--;
                 enemies.RemoveAtSwapBack(i); // 不递增 i，检查换过来的元素
             }
             else i++;

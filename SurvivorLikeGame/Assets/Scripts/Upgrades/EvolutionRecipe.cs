@@ -6,6 +6,7 @@ public class EvolutionRecipe : ScriptableObject
 {
     public WeaponTarget baseWeapon;      // 需要满级的基础武器
     public string requiredUpgradeId;     // 需要拥有过的升级 id（充当"被动"条件）
+    public int requiredBossMaterials = 0; // 额外需要消耗的 Boss 进化材料（0 = 旧配方，无材料门槛）
     public string displayName;           // 进化后名称
     [TextArea] public string description;
 

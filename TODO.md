@@ -7,19 +7,25 @@
 
 把现在纯时间轴的线性加难度，改成有节奏的事件表。
 
-- [ ] 新增 `WaveEventData`（ScriptableObject）：触发时间、事件类型、参数
-- [ ] 事件类型：精英怪（大体型高血、必掉高级经验）、包围潮（一圈敌人同时刷新）、限时精英（击杀掉进化材料）
-- [ ] 节奏草案：每 30s 一个精英、每分钟一圈包围潮、每 5 分钟一个 Boss
-- [ ] `GameManager` 增加事件调度器，与现有刷怪表并行
-- [ ] 事件触发时的屏幕提示（复用 HUD，加一行大字预告）
+- [x] 新增 `WaveEventData`（ScriptableObject）：触发时间、事件类型、参数
+- [x] 事件类型：精英怪（大体型高血、必掉高级经验）、包围潮（一圈敌人同时刷新）、限时精英（当前奖励经验，进化材料待接）
+- [x] 节奏草案：精英 30/90/150/210/270s、包围潮 60/120/180/240s、Boss 占位 300s
+- [x] 事件调度器与现有刷怪表并行（实现为 `WaveEventScheduler`，运行时自动创建，不改 `GameManager`）
+- [x] 事件触发时的屏幕提示（`WaveBanner` 运行时 Canvas，FIFO 淡入淡出）
+- [ ] Boss 多阶段实现（当前 `BossPlaceholder` 只是单只超大精英）
+- [ ] 限时精英改为掉落进化材料（当前奖励经验）
 
 ## 2. Boss 战
 
-- [ ] `BossController`：大体型、多阶段（血量阈值切换行为）
-- [ ] 阶段行为：冲锋（向玩家突进）、弹幕（环形/扇形，复用 `ProjectileWeapon` 的发射逻辑）
-- [ ] Boss 血条 UI（屏幕顶部横条）
-- [ ] 击杀奖励：专属进化材料 + 大量经验
-- [ ] 与武器进化联动：部分进化配方要求 Boss 材料而非普通升级（扩展 `EvolutionRecipe.requiredUpgradeId` 的判定来源）
+- [x] `BossController`：大体型、多阶段（实现为 `EnemyBehavior.Boss` + `BossCombat`，融入 DOTS 仿真）
+- [x] 阶段行为：冲锋（向玩家突进）、弹幕（环形，复用 `EnemyProjectile`；阶段 2/3 触发）
+- [x] Boss 血条 UI（`BossHealthBar`，运行时 Canvas，读取 `BossStatus`）
+- [x] 击杀奖励：大量经验（`expValue` 50 + 经验宝石）
+- [x] 击杀奖励：专属进化材料（`PlayerProgress.BossMaterials`，局内生效；持久化留给 Meta 成长）
+- [x] 与武器进化联动：`EvolutionRecipe.requiredBossMaterials`，材料不足时进化选项不出现，选择后扣材料（演示配方 `evo_boss_core_orbs`）
+- [ ] 阶段 3 差异化（当前阶段 2/3 使用同一套冲锋/弹幕参数）
+- [ ] Boss 专属外观/动画（当前复用普通敌人帧）
+- [ ] 将 Boss 材料接入 Meta 持久化存档（当前每局清零）
 
 ## 3. Meta 成长（局外永久成长）
 
