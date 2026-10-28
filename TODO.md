@@ -34,8 +34,11 @@
 - [x] 局内货币：金币掉落（普通 20% / 精英 75% / Boss 必掉，复用磁吸拾取与对象池）
 - [x] 结算界面：本局时长 / 击杀 / 获得金币 / 累计金币（运行时 Canvas，死亡演出后进入）
 - [x] `PlayerPrefs` 持久化累计金币（永久属性、已解锁内容待 Meta-B）
-- [ ] 永久商店 UI：金币购买永久属性（直接写进 `PlayerStats` 的初始值）
-- [ ] 解锁项：新武器、新角色、更高难度档位
+- [x] 永久商店 UI：金币购买永久属性（`MetaShopScreen`，标题页 TAB 打开，7 项升级）
+- [x] 永久属性写入 `PlayerStats` 初始值（`MetaProgress.ApplyPermanentStats`，新局 `PlayerController.Start` 应用）
+- [ ] 解锁项：新武器、新角色、更高难度档位（`IsUnlocked/Unlock` 存储已就绪，待接入具体内容）
+- [ ] 商店视觉打磨与截图留档
+- [ ] Meta 存档迁移逻辑（版本键已写入，待需要时实现）
 - [ ] 结算界面的 R 键路径单独验证（当前按钮路径已验证）
 - [ ] 非零 `gameTime` 的时长入账验证（自动测试停留在首页）
 - [ ] 金币拾取暂用经验音效占位，后续可换专属音效
@@ -43,10 +46,13 @@
 
 ## 4. 角色差异
 
-- [ ] `CharacterData`（ScriptableObject）：初始武器、初始属性加成、被动特性
-- [ ] 选角界面（游戏开始前）
-- [ ] `PlayerController` 按所选角色初始化（现为单例直挂，改造成本低）
-- [ ] 至少 3 个角色：均衡（法球）、玻璃大炮（飞弹+伤害加成）、坦克（高护甲+拾取范围）
+- [x] `CharacterData`（ScriptableObject）：初始武器、初始属性加成、被动描述
+- [x] 选角界面（标题页按 C 打开，运行时 Canvas，与 TAB 商店互斥）
+- [x] `PlayerController` 按所选角色初始化（`MetaProgress` 永久属性之后、满血之前应用）
+- [x] 至少 3 个角色：均衡（Orb）、玻璃大炮（Projectile + 伤害/暴击）、坦克（高护甲 + 拾取范围）
+- [ ] 角色解锁接入 `MetaProgress.IsUnlocked`（Meta-B2）
+- [ ] 更多角色与角色专属初始武器（当前仅 Orb/Projectile）
+- [ ] 角色立绘/头像与更强的机制型被动（当前以数值加成为主）
 
 ## 5. 体验与工程缺口（补充）
 

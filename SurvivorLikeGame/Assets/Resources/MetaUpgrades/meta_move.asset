@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f91a09c919ab741a4816487c30790fba, type: 3}
+  m_Name: meta_move
+  m_EditorClassIdentifier: Assembly-CSharp::MetaUpgradeData
+  id: meta_move
+  displayName: "\u79FB\u901F +4%"
+  description: "\u6BCF\u7EA7\u6C38\u4E45\u63D0\u5347 4% \u79FB\u52A8\u901F\u5EA6\u3002"
+  maxLevel: 5
+  baseCost: 15
+  costGrowth: 1.5
+  stat: 2
+  valuePerLevel: 0.04

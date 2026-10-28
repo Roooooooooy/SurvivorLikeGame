@@ -16,10 +16,34 @@ public class WeaponManager : MonoBehaviour
     void Start()
     {
         activeWeapons = new List<WeaponBase>(GetComponentsInChildren<WeaponBase>());
+        FilterByCharacterWeapon();
         upgradePool = new List<UpgradeData>(Resources.LoadAll<UpgradeData>("Upgrades"));
         recipes = new List<EvolutionRecipe>(Resources.LoadAll<EvolutionRecipe>("Evolutions"));
         if (upgradePool.Count == 0)
             Debug.LogError("WeaponManager: Resources/Upgrades 下没有找到任何 UpgradeData 资产");
+    }
+
+    // 按角色初始武器过滤：只保留匹配项，其余隐藏并移出升级池。
+    // 一个都不匹配时保留全部，避免角色配置错误导致玩家完全无武器。
+    void FilterByCharacterWeapon()
+    {
+        var character = CharacterSelection.Selected;
+        if (character == null) return;
+
+        var matched = new List<WeaponBase>();
+        foreach (var weapon in activeWeapons)
+            if (weapon != null && TargetOf(weapon) == character.initialWeapon)
+                matched.Add(weapon);
+
+        if (matched.Count == 0) return;
+
+        foreach (var weapon in activeWeapons)
+        {
+            if (weapon == null || matched.Contains(weapon)) continue;
+            weapon.gameObject.SetActive(false);
+        }
+
+        activeWeapons = matched;
     }
 
     public void ShowUpgradeOptions()
