@@ -14,6 +14,8 @@ public partial class EnemySimulation
         public float[] frames;   // 逐实例动画帧索引
         public float[] rows;     // 逐实例图集行（0=行走 1=死亡）
         public float[] flashes;  // 逐实例受击闪红强度
+        public float[] outlines;  // 逐实例描边强度（精英/Boss = 1，其余 0）
+        public float[] dissolves; // 逐实例死亡溶解进度（0=不溶解，1=完全溶解）
         public int count;
     }
 
@@ -27,12 +29,15 @@ public partial class EnemySimulation
     float[] typeAnimFps;       // 类型 -> 帧率
     bool[] typeHasDeathAnim;   // 类型 -> 是否有死亡动画行
     float[] typeDeathDuration; // 类型 -> 死亡动画时长
+    bool[] typeOutline;        // 类型 -> 是否精英/Boss（需要描边）
     MaterialPropertyBlock mpb;
     Matrix4x4[] chunkMats;
     Vector4[] chunkCols;
     float[] chunkFrames;
     float[] chunkRows;
     float[] chunkFlashes;
+    float[] chunkOutlines;
+    float[] chunkDissolves;
 
     void InitRenderer()
     {
@@ -50,6 +55,8 @@ public partial class EnemySimulation
         chunkFrames = new float[ChunkSize];
         chunkRows = new float[ChunkSize];
         chunkFlashes = new float[ChunkSize];
+        chunkOutlines = new float[ChunkSize];
+        chunkDissolves = new float[ChunkSize];
 
         // 同贴图的类型共享一个批次（一次 draw call 系列）
         var batchByTexture = new Dictionary<Texture, RenderBatch>();
@@ -60,6 +67,7 @@ public partial class EnemySimulation
         typeAnimFps = new float[types.Count];
         typeHasDeathAnim = new bool[types.Count];
         typeDeathDuration = new float[types.Count];
+        typeOutline = new bool[types.Count];
 
         for (int i = 0; i < types.Count; i++)
         {
@@ -69,6 +77,10 @@ public partial class EnemySimulation
             typeAnimFps[i] = t.animFps;
             typeHasDeathAnim[i] = t.hasDeathAnim;
             typeDeathDuration[i] = t.hasDeathAnim ? t.animFrames / t.animFps : 0.15f;
+            // 精英/Boss 描边判定：体型放大、Boss 行为或高血量，三者满足其一即可
+            typeOutline[i] = t.scale >= 1.7f
+                || t.behavior == EnemyBehavior.Boss
+                || t.maxHealth >= 200;
 
             if (sprite == null)
             {
@@ -86,6 +98,10 @@ public partial class EnemySimulation
                 var mat = new Material(shader) { mainTexture = sprite.texture, enableInstancing = true };
                 mat.SetFloat("_Frames", typeAnimFrames[i]);
                 mat.SetFloat("_Rows", t.hasDeathAnim ? 2f : 1f);
+                // 描边宽约 1.25 个图集像素，颜色偏暗金；溶解边缘用余烬橙
+                mat.SetColor("_OutlineColor", new Color(0.78f, 0.58f, 0.16f, 1f));
+                mat.SetFloat("_OutlineWidth", 1.25f);
+                mat.SetColor("_DissolveEdge", new Color(1f, 0.55f, 0.18f, 1f));
                 batch = new RenderBatch
                 {
                     material = mat,
@@ -94,6 +110,8 @@ public partial class EnemySimulation
                     frames = new float[maxEnemies],
                     rows = new float[maxEnemies],
                     flashes = new float[maxEnemies],
+                    outlines = new float[maxEnemies],
+                    dissolves = new float[maxEnemies],
                 };
                 batchByTexture[sprite.texture] = batch;
                 batchList.Add(batch);
@@ -140,21 +158,28 @@ public partial class EnemySimulation
             float frame = 0f;
             float row = 0f;
             float flash = 0f;
+            float outline = typeOutline[ti] ? 1f : 0f;
+            float dissolve = 0f;
 
             if (dying)
             {
                 float prog = Mathf.Clamp01(1f - e.deathTimer / typeDeathDuration[ti]);
                 if (typeHasDeathAnim[ti])
                 {
-                    // 播放死亡动画行（单向，不循环）
+                    // 播放死亡动画行（单向，不循环）；溶解保持 0，不干扰原死亡动画
+                    int fi = Mathf.Min(frames - 1, Mathf.FloorToInt(prog * frames));
                     row = 1f;
-                    frame = Mathf.Min(frames - 1, Mathf.Floor(prog * frames));
+                    frame = fi;
+                    // 死亡行（shader row=1，采样图集上半张的压扁动画）每帧内容都贴到单元格底部，
+                    // 与行走行脚底基线一致，不需要额外竖直偏移。曾按行走行的间隙做补偿，
+                    // 会让死亡中段整体下沉 2~4 图集像素（body 看起来陷进地面）。
                 }
                 else
                 {
-                    // 无死亡动画的类型：快速放大淡出
+                    // 无死亡动画的类型：保留原有的快速放大淡出，同时按进度溶解
                     size *= 1f + prog * 0.8f;
                     c.a = 1f - prog;
+                    dissolve = prog;
                 }
             }
             else
@@ -187,6 +212,8 @@ public partial class EnemySimulation
             batch.frames[k] = frame;
             batch.rows[k] = row;
             batch.flashes[k] = flash;
+            batch.outlines[k] = outline;
+            batch.dissolves[k] = dissolve;
         }
 
         foreach (var batch in batches)
@@ -200,10 +227,14 @@ public partial class EnemySimulation
                 System.Array.Copy(batch.frames, drawn, chunkFrames, 0, n);
                 System.Array.Copy(batch.rows, drawn, chunkRows, 0, n);
                 System.Array.Copy(batch.flashes, drawn, chunkFlashes, 0, n);
+                System.Array.Copy(batch.outlines, drawn, chunkOutlines, 0, n);
+                System.Array.Copy(batch.dissolves, drawn, chunkDissolves, 0, n);
                 mpb.SetVectorArray("_Color", chunkCols);
                 mpb.SetFloatArray("_Frame", chunkFrames);
                 mpb.SetFloatArray("_Row", chunkRows);
                 mpb.SetFloatArray("_Flash", chunkFlashes);
+                mpb.SetFloatArray("_Outline", chunkOutlines);
+                mpb.SetFloatArray("_Dissolve", chunkDissolves);
                 Graphics.DrawMeshInstanced(quad, 0, batch.material, chunkMats, n, mpb);
                 drawn += n;
             }

@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a6964842f494424fabfb3cc373f8b36, type: 3}
+  m_Name: UITheme
+  m_EditorClassIdentifier: Assembly-CSharp::UITheme
+  displayFont: {fileID: 12800000, guid: c2abd163f09e4f39babdc171bd8ba92a, type: 3}
+  bodyFont: {fileID: 12800000, guid: 48b41787b874441a9cd6c46b494b692d, type: 3}
+  cjkFont: {fileID: 12800000, guid: a27508d54097249ee9c045a49fc19c04, type: 3}
+  ink: {r: 0.023529412, g: 0.03137255, b: 0.043137256, a: 1}
+  panel: {r: 0.05882353, g: 0.08235294, b: 0.11372549, a: 1}
+  panel2: {r: 0.08235294, g: 0.11372549, b: 0.15294118, a: 1}
+  gold: {r: 0.7882353, g: 0.65882355, b: 0.41568628, a: 1}
+  goldHi: {r: 0.90588236, g: 0.827451, b: 0.627451, a: 1}
+  parchment: {r: 0.8509804, g: 0.8235294, b: 0.7607843, a: 1}
+  muted: {r: 0.56078434, g: 0.54509807, b: 0.5019608, a: 1}
+  blood: {r: 0.54901963, g: 0.18431373, b: 0.20392157, a: 1}
+  bloodHi: {r: 0.7882353, g: 0.31764707, b: 0.34117648, a: 1}
+  teal: {r: 0.37254903, g: 0.56078434, b: 0.5411765, a: 1}
+  tealHi: {r: 0.56078434, g: 0.7529412, b: 0.72156864, a: 1}
+  line: {r: 0.14901961, g: 0.19215687, b: 0.23921569, a: 1}
+  panelSprite: {fileID: 21300000, guid: 2a8bbd77508b44a669c747224a1fc395, type: 3}
+  panelInlaySprite: {fileID: 21300000, guid: 3134e36efdb5b49578ec276fa40d18ed, type: 3}
+  buttonSprite: {fileID: 21300000, guid: aca3a0d59e54248f98b945976c1144e8, type: 3}
+  buttonPressedSprite: {fileID: 21300000, guid: 0847b0720f2e54acda314405bc8768af, type: 3}
+  barSprite: {fileID: 21300000, guid: 912c980858fec49868fdeda2441c0900, type: 3}
+  barFrameSprite: {fileID: 21300000, guid: 1c2f7992b87494350a11bbde9521efe0, type: 3}
+  frameSprite: {fileID: 21300000, guid: a20e40b95cbfd4a268a1b8b4c887c0b3, type: 3}

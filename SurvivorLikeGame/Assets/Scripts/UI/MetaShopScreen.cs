@@ -7,6 +7,7 @@ using UnityEngine.UI;
 // 不往场景里放任何对象，也不依赖任意 prefab。
 // 升级条目来自 Resources/MetaUpgrades 下的 MetaUpgradeData 资产，按 displayName/id/资产名稳定排序。
 // 数据读写一律走 MetaProgress 契约：TotalCoins / GetUpgradeLevel / GetUpgradeCost / TryPurchase。
+// 视觉统一走 UITheme / UIFactory：金色标题、分隔线、暗色九宫格面板与主题按钮。
 public class MetaShopScreen : MonoBehaviour
 {
     private const int CanvasSortingOrder = 300;   // 高于结算界面(200)，保证标题页上始终压在最上层
@@ -19,8 +20,6 @@ public class MetaShopScreen : MonoBehaviour
     private const float MinRowHeight = 52f;
 
     private static MetaShopScreen instance;
-    private static Font cachedFont;
-    private static Sprite cachedWhiteSprite;
 
     // 商店是否打开：GameManager 用它判断是否吞掉「任意键开始」
     public static bool IsOpen { get; private set; }
@@ -47,8 +46,6 @@ public class MetaShopScreen : MonoBehaviour
     {
         instance = null;
         IsOpen = false;
-        cachedFont = null;
-        cachedWhiteSprite = null;
     }
 
     // ---------------- 对外入口 ----------------
@@ -135,7 +132,13 @@ public class MetaShopScreen : MonoBehaviour
         // BUY / 关闭按钮需要点击事件（事件系统由场景提供）
         gameObject.AddComponent<GraphicRaycaster>();
 
-        var font = ResolveFont();
+        var theme = UITheme.Current;
+        Color gold = theme != null ? theme.gold : new Color(0.79f, 0.66f, 0.42f, 1f);
+        Color goldHi = theme != null ? theme.goldHi : new Color(0.91f, 0.83f, 0.63f, 1f);
+        Color parchment = theme != null ? theme.parchment : new Color(0.85f, 0.82f, 0.76f, 1f);
+        Color muted = theme != null ? theme.muted : new Color(0.56f, 0.55f, 0.50f, 1f);
+        Color bloodHi = theme != null ? theme.bloodHi : new Color(0.79f, 0.32f, 0.34f, 1f);
+        Color borderColor = theme != null ? theme.WithAlpha(theme.gold, 0.65f) : new Color(0.30f, 0.25f, 0.20f, 0.92f);
 
         // 读取升级资产并计算面板高度：行数多时自动压缩行高，避免溢出屏幕
         LoadUpgrades();
@@ -148,54 +151,59 @@ public class MetaShopScreen : MonoBehaviour
         float halfHeight = panelHeight * 0.5f;
 
         // 全屏深色遮罩：盖住标题页，同时吞掉鼠标点击
-        var scrim = CreateImage("Scrim", transform, new Color(0f, 0f, 0f, 0.78f));
-        Stretch(scrim.rectTransform);
-        scrim.raycastTarget = true;
+        var scrim = UIFactory.CreateImage(transform, "Scrim", null, new Color(0f, 0f, 0f, 0.78f),
+            false, true);
+        UIFactory.Stretch(scrim.rectTransform);
 
-        // 面板外框 + 内衬，沿用黑魂风的暗色金属边框
-        var border = CreateImage("PanelBorder", transform, new Color(0.30f, 0.25f, 0.20f, 0.92f));
+        // 面板外框（九宫格 border_010）+ 内衬（panel_tan）
+        var border = UIFactory.CreateImage(transform, "PanelBorder",
+            theme != null ? theme.frameSprite : null, borderColor, true, false);
         SetCentered(border.rectTransform, PanelWidth + 30f, panelHeight + 30f, Vector2.zero);
 
-        var panel = CreateImage("Panel", border.transform, new Color(0.075f, 0.07f, 0.065f, 0.97f));
+        var panel = UIFactory.CreatePanel(border.transform, "Panel");
         SetCentered(panel.rectTransform, PanelWidth, panelHeight, Vector2.zero);
         panel.raycastTarget = true;
 
-        // 标题（左）
-        CreateText("Title", panel.transform, font, 46, new Vector2(340f, 64f),
-            new Vector2(-260f, halfHeight - 58f), FontStyle.Bold, new Color(0.96f, 0.93f, 0.86f, 1f),
-            TextAnchor.MiddleLeft).text = "永久商店";
+        // 标题（左，金色）
+        var title = UIFactory.CreateText(panel.transform, "Title", "永久商店", 46,
+            goldHi, TextAnchor.MiddleLeft, true, FontStyle.Bold);
+        SetCentered(title.rectTransform, 340f, 64f, new Vector2(-260f, halfHeight - 58f));
 
-        // 累计金币（右上，靠内）
-        coinsText = CreateText("Coins", panel.transform, font, 26, new Vector2(400f, 48f),
-            new Vector2(90f, halfHeight - 58f), FontStyle.Bold, new Color(0.90f, 0.78f, 0.45f, 1f),
-            TextAnchor.MiddleRight);
+        // 累计金币（右上，靠内，语义色 gold）
+        coinsText = UIFactory.CreateText(panel.transform, "Coins", string.Empty, 26,
+            gold, TextAnchor.MiddleRight, false, FontStyle.Bold);
+        SetCentered(coinsText.rectTransform, 400f, 48f, new Vector2(90f, halfHeight - 58f));
 
         // 关闭按钮（最右上角）
-        CreateCloseButton(panel.transform, font, new Vector2(370f, halfHeight - 58f));
+        CreateCloseButton(panel.transform, new Vector2(370f, halfHeight - 58f));
 
         // 标题下的分隔线
-        var divider = CreateImage("Divider", panel.transform, new Color(0.42f, 0.36f, 0.28f, 0.9f));
+        var divider = UIFactory.CreateImage(panel.transform, "Divider", null,
+            theme != null ? theme.WithAlpha(gold, 0.55f) : new Color(0.42f, 0.36f, 0.28f, 0.9f),
+            false, false);
         SetCentered(divider.rectTransform, PanelWidth - 80f, 2f, new Vector2(0f, halfHeight - 100f));
 
         // 升级行：从分隔线下方开始逐行排列
         float firstRowY = halfHeight - HeaderHeight - rowHeight * 0.5f;
         for (int i = 0; i < rowCount; i++)
-            CreateRow(panel.transform, font, upgrades[i], i, firstRowY - i * rowHeight, rowHeight);
+            CreateRow(panel.transform, upgrades[i], i, firstRowY - i * rowHeight, rowHeight);
 
         // 空状态：没有 Assets/Resources/MetaUpgrades 资产时给出明确提示
-        emptyText = CreateText("Empty", panel.transform, font, 28, new Vector2(PanelWidth - 120f, 60f),
-            Vector2.zero, FontStyle.Normal, new Color(0.72f, 0.69f, 0.64f, 0.85f), TextAnchor.MiddleCenter);
-        emptyText.text = "暂无可用升级";
+        emptyText = UIFactory.CreateText(panel.transform, "Empty", "暂无可用升级", 28,
+            muted, TextAnchor.MiddleCenter, false, FontStyle.Normal);
+        SetCentered(emptyText.rectTransform, PanelWidth - 120f, 60f, Vector2.zero);
         emptyText.gameObject.SetActive(rowCount == 0);
 
         // 底部：左侧固定操作提示，右侧显示购买结果
-        CreateText("KeyHint", panel.transform, font, 22, new Vector2(420f, 40f),
-            new Vector2(-PanelWidth * 0.5f + 40f + 210f, -halfHeight + 38f), FontStyle.Normal,
-            new Color(0.86f, 0.83f, 0.78f, 0.7f), TextAnchor.MiddleLeft).text = "TAB / ESC 关闭";
+        var keyHint = UIFactory.CreateText(panel.transform, "KeyHint", "TAB / ESC 关闭", 22,
+            muted, TextAnchor.MiddleLeft, false, FontStyle.Normal);
+        SetCentered(keyHint.rectTransform, 420f, 40f,
+            new Vector2(-PanelWidth * 0.5f + 40f + 210f, -halfHeight + 38f));
 
-        messageText = CreateText("Message", panel.transform, font, 22, new Vector2(460f, 40f),
-            new Vector2(PanelWidth * 0.5f - 40f - 230f, -halfHeight + 38f), FontStyle.Bold,
-            new Color(0.86f, 0.83f, 0.78f, 0.9f), TextAnchor.MiddleRight);
+        messageText = UIFactory.CreateText(panel.transform, "Message", string.Empty, 22,
+            parchment, TextAnchor.MiddleRight, false, FontStyle.Bold);
+        SetCentered(messageText.rectTransform, 460f, 40f,
+            new Vector2(PanelWidth * 0.5f - 40f - 230f, -halfHeight + 38f));
     }
 
     // 读 Resources/MetaUpgrades 下全部升级；排序保证每次打开顺序一致
@@ -222,108 +230,104 @@ public class MetaShopScreen : MonoBehaviour
         return string.Compare(a.name, b.name, StringComparison.Ordinal);
     }
 
-    private void CreateRow(Transform parent, Font font, MetaUpgradeData data, int index,
-        float y, float rowHeight)
+    private void CreateRow(Transform parent, MetaUpgradeData data, int index, float y, float rowHeight)
     {
-        // 交替底色，便于区分相邻行
-        var bg = CreateImage("Row_" + (data != null ? data.id : index.ToString()), parent,
-            index % 2 == 0
-                ? new Color(0.115f, 0.105f, 0.095f, 0.9f)
-                : new Color(0.095f, 0.088f, 0.08f, 0.9f));
+        var theme = UITheme.Current;
+        Color rowColor = index % 2 == 0
+            ? (theme != null ? theme.panel2 : new Color(0.08f, 0.11f, 0.15f, 1f))
+            : (theme != null ? theme.panel : new Color(0.06f, 0.08f, 0.11f, 1f));
+        Color parchment = theme != null ? theme.parchment : new Color(0.85f, 0.82f, 0.76f, 1f);
+        Color muted = theme != null ? theme.muted : new Color(0.56f, 0.55f, 0.50f, 1f);
+
+        // 交替底色，便于区分相邻行；九宫格内衬贴图
+        var bg = UIFactory.CreateImage(parent, "Row_" + (data != null ? data.id : index.ToString()),
+            null, rowColor, false, false);
         SetCentered(bg.rectTransform, RowWidth, Mathf.Max(40f, rowHeight - 8f), new Vector2(0f, y));
 
         var row = new UpgradeRow { data = data };
 
         // 名称 + 描述
-        CreateText("Name", bg.transform, font, 26, new Vector2(320f, 34f),
-            new Vector2(-270f, 14f), FontStyle.Bold, new Color(0.96f, 0.93f, 0.86f, 1f),
-            TextAnchor.MiddleLeft).text = data != null ? data.displayName : "(未命名)";
+        var nameText = UIFactory.CreateText(bg.transform, "Name",
+            data != null ? data.displayName : "(未命名)", 26, parchment,
+            TextAnchor.MiddleLeft, false, FontStyle.Bold);
+        SetCentered(nameText.rectTransform, 320f, 34f, new Vector2(-270f, 14f));
 
-        var desc = CreateText("Desc", bg.transform, font, 15, new Vector2(320f, 30f),
-            new Vector2(-270f, -20f), FontStyle.Normal, new Color(0.72f, 0.69f, 0.64f, 0.85f),
-            TextAnchor.MiddleLeft);
-        desc.text = data != null ? data.description : string.Empty;
+        var desc = UIFactory.CreateText(bg.transform, "Desc",
+            data != null ? data.description : string.Empty, 15, muted,
+            TextAnchor.MiddleLeft, false, FontStyle.Normal);
+        SetCentered(desc.rectTransform, 320f, 30f, new Vector2(-270f, -20f));
         desc.horizontalOverflow = HorizontalWrapMode.Wrap;
         desc.verticalOverflow = VerticalWrapMode.Truncate;
 
-        // 等级
-        row.levelText = CreateText("Level", bg.transform, font, 24, new Vector2(130f, 40f),
-            new Vector2(-20f, 0f), FontStyle.Bold, new Color(0.86f, 0.83f, 0.78f, 0.95f),
-            TextAnchor.MiddleCenter);
+        // 等级（纯拉丁/数字，BodyFont）
+        row.levelText = UIFactory.CreateText(bg.transform, "Level", string.Empty, 24,
+            parchment, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+        SetCentered(row.levelText.rectTransform, 130f, 40f, new Vector2(-20f, 0f));
 
-        // 下一级价格
-        row.priceText = CreateText("Price", bg.transform, font, 24, new Vector2(130f, 40f),
-            new Vector2(140f, 0f), FontStyle.Normal, new Color(0.90f, 0.78f, 0.45f, 1f),
-            TextAnchor.MiddleCenter);
+        // 下一级价格（含中文，刷新时由 ResolveFont 切到 CJK 子集）
+        row.priceText = UIFactory.CreateText(bg.transform, "Price", string.Empty, 24,
+            parchment, TextAnchor.MiddleCenter, false, FontStyle.Normal);
+        SetCentered(row.priceText.rectTransform, 130f, 40f, new Vector2(140f, 0f));
 
         // BUY 按钮
-        row.buyButton = CreateBuyButton(bg.transform, font, new Vector2(350f, 0f), out row.buyLabel);
+        row.buyButton = CreateBuyButton(bg.transform, new Vector2(350f, 0f), out row.buyLabel);
         var captured = row;
         row.buyButton.onClick.AddListener(() => OnBuyClicked(captured));
 
         rows.Add(row);
     }
 
-    private Button CreateBuyButton(Transform parent, Font font, Vector2 anchoredPos, out Text label)
+    private Button CreateBuyButton(Transform parent, Vector2 anchoredPos, out Text label)
     {
-        var go = new GameObject("BuyButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-        go.transform.SetParent(parent, false);
+        var button = UIFactory.CreateButton(parent, "BuyButton", "BUY",
+            new Vector2(150f, 54f), null);
+        SetCentered(button.GetComponent<RectTransform>(), 150f, 54f, anchoredPos);
+        StyleButton(button);
 
-        var rt = go.GetComponent<RectTransform>();
-        SetCentered(rt, 150f, 54f, anchoredPos);
-
-        var image = go.GetComponent<Image>();
-        image.sprite = GetWhiteSprite();
-        image.color = new Color(0.20f, 0.17f, 0.12f, 1f);
-        image.raycastTarget = true;
-
-        var button = go.GetComponent<Button>();
-        button.targetGraphic = image;
-        var colors = button.colors;
-        colors.normalColor = new Color(0.20f, 0.17f, 0.12f, 1f);
-        colors.highlightedColor = new Color(0.34f, 0.28f, 0.18f, 1f);
-        colors.pressedColor = new Color(0.12f, 0.10f, 0.08f, 1f);
-        colors.selectedColor = colors.normalColor;
-        colors.disabledColor = new Color(0.12f, 0.11f, 0.10f, 0.45f);
-        button.colors = colors;
-
-        label = CreateText("Text", rt, font, 22, new Vector2(140f, 48f), Vector2.zero,
-            FontStyle.Bold, new Color(0.96f, 0.93f, 0.86f, 1f), TextAnchor.MiddleCenter);
+        label = button.transform.Find("Label").GetComponent<Text>();
+        label.fontSize = 22;
         return button;
     }
 
-    private void CreateCloseButton(Transform parent, Font font, Vector2 anchoredPos)
+    private void CreateCloseButton(Transform parent, Vector2 anchoredPos)
     {
-        var go = new GameObject("CloseButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-        go.transform.SetParent(parent, false);
+        var button = UIFactory.CreateButton(parent, "CloseButton", "关闭",
+            new Vector2(120f, 44f), Hide);
+        SetCentered(button.GetComponent<RectTransform>(), 120f, 44f, anchoredPos);
+        StyleButton(button);
 
-        var rt = go.GetComponent<RectTransform>();
-        SetCentered(rt, 120f, 44f, anchoredPos);
+        var label = button.transform.Find("Label").GetComponent<Text>();
+        label.fontSize = 20;
+    }
 
-        var image = go.GetComponent<Image>();
-        image.sprite = GetWhiteSprite();
-        image.color = new Color(0.16f, 0.14f, 0.12f, 1f);
-        image.raycastTarget = true;
-
-        var button = go.GetComponent<Button>();
-        button.targetGraphic = image;
+    // 统一主题交互色：白色常态、金色 hover / pressed
+    private static void StyleButton(Button button)
+    {
+        var theme = UITheme.Current;
         var colors = button.colors;
-        colors.normalColor = new Color(0.16f, 0.14f, 0.12f, 1f);
-        colors.highlightedColor = new Color(0.28f, 0.23f, 0.18f, 1f);
-        colors.pressedColor = new Color(0.10f, 0.09f, 0.08f, 1f);
-        colors.selectedColor = colors.normalColor;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = theme != null ? theme.goldHi : new Color(1f, 0.92f, 0.75f, 1f);
+        colors.selectedColor = Color.white;
+        colors.pressedColor = theme != null ? theme.gold : new Color(0.72f, 0.66f, 0.54f, 1f);
+        colors.disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
         button.colors = colors;
-        button.onClick.AddListener(Hide);
-
-        CreateText("Text", rt, font, 20, new Vector2(110f, 40f), Vector2.zero,
-            FontStyle.Bold, new Color(0.96f, 0.93f, 0.86f, 1f), TextAnchor.MiddleCenter).text = "关闭";
     }
 
     // ---------------- 数据刷新与购买 ----------------
 
     private void Refresh()
     {
-        if (coinsText != null) coinsText.text = "累计金币  " + MetaProgress.TotalCoins;
+        var theme = UITheme.Current;
+        Color gold = theme != null ? theme.gold : new Color(0.79f, 0.66f, 0.42f, 1f);
+        Color goldHi = theme != null ? theme.goldHi : new Color(0.91f, 0.83f, 0.63f, 1f);
+        Color muted = theme != null ? theme.muted : new Color(0.56f, 0.55f, 0.50f, 1f);
+        Color bloodHi = theme != null ? theme.bloodHi : new Color(0.79f, 0.32f, 0.34f, 1f);
+
+        if (coinsText != null)
+        {
+            coinsText.text = "累计金币  " + MetaProgress.TotalCoins;
+            ApplyFont(coinsText, false);
+        }
 
         int coins = MetaProgress.TotalCoins;
         for (int i = 0; i < rows.Count; i++)
@@ -339,16 +343,11 @@ public class MetaShopScreen : MonoBehaviour
 
             row.levelText.text = "Lv " + level + "/" + maxLevel;
             row.priceText.text = maxed ? "满级" : cost + " 金币";
-            row.priceText.color = maxed
-                ? new Color(0.60f, 0.58f, 0.54f, 0.9f)
-                : affordable
-                    ? new Color(0.90f, 0.78f, 0.45f, 1f)
-                    : new Color(0.78f, 0.42f, 0.36f, 1f);
+            ApplyFont(row.priceText, false);
+            row.priceText.color = maxed ? muted : (affordable ? gold : bloodHi);
 
             row.buyLabel.text = maxed ? "MAX" : "BUY";
-            row.buyLabel.color = affordable
-                ? new Color(0.96f, 0.93f, 0.86f, 1f)
-                : new Color(0.62f, 0.59f, 0.54f, 0.85f);
+            row.buyLabel.color = affordable ? goldHi : muted;
             row.buyButton.interactable = affordable; // 满级或金币不足时不可点
         }
     }
@@ -382,35 +381,22 @@ public class MetaShopScreen : MonoBehaviour
     private void ShowMessage(string text, bool success)
     {
         if (messageText == null) return;
+        var theme = UITheme.Current;
         messageText.text = text;
+        ApplyFont(messageText, false);
         messageText.color = success
-            ? new Color(0.55f, 0.85f, 0.55f, 1f)
-            : new Color(0.90f, 0.45f, 0.40f, 1f);
+            ? (theme != null ? theme.tealHi : new Color(0.56f, 0.75f, 0.72f, 1f))
+            : (theme != null ? theme.bloodHi : new Color(0.79f, 0.32f, 0.34f, 1f));
+    }
+
+    // 文案变化后按内容重选字体：中文 → CJK 子集，英文/数字 → BodyFont
+    private static void ApplyFont(Text text, bool display)
+    {
+        var theme = UITheme.Current;
+        if (theme != null) text.font = theme.ResolveFont(text.text, display);
     }
 
     // ---------------- 通用 UI 工具 ----------------
-
-    // 纯色 Image；统一使用运行时生成的 1x1 白色 Sprite
-    private static Image CreateImage(string name, Transform parent, Color color)
-    {
-        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        go.transform.SetParent(parent, false);
-
-        var image = go.GetComponent<Image>();
-        image.sprite = GetWhiteSprite();
-        image.color = color;
-        image.raycastTarget = false;
-        return image;
-    }
-
-    // 铺满父节点
-    private static void Stretch(RectTransform rt)
-    {
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
-    }
 
     // 居中铺在父节点上，size 为宽高；pivot 居中
     private static void SetCentered(RectTransform rt, float width, float height, Vector2 anchoredPos)
@@ -420,89 +406,5 @@ public class MetaShopScreen : MonoBehaviour
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.sizeDelta = new Vector2(width, height);
         rt.anchoredPosition = anchoredPos;
-    }
-
-    // 文字样式：与 SettlementScreen / WaveBanner 相同（描边 + 投影），居中锚点
-    private static Text CreateText(string name, Transform parent, Font font, int fontSize, Vector2 size,
-        Vector2 anchoredPos, FontStyle style, Color color, TextAnchor alignment)
-    {
-        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
-        go.transform.SetParent(parent, false);
-
-        var rt = go.GetComponent<RectTransform>();
-        SetCentered(rt, size.x, size.y, anchoredPos);
-
-        var text = go.GetComponent<Text>();
-        text.font = font;
-        text.fontSize = fontSize;
-        text.fontStyle = style;
-        text.color = color;
-        text.alignment = alignment;
-        text.horizontalOverflow = HorizontalWrapMode.Overflow;
-        text.verticalOverflow = VerticalWrapMode.Overflow;
-        text.raycastTarget = false;
-
-        var outline = go.AddComponent<Outline>();
-        outline.effectColor = new Color(0f, 0f, 0f, 0.85f);
-        outline.effectDistance = new Vector2(2f, -2f);
-        outline.useGraphicAlpha = false;
-
-        var shadow = go.AddComponent<Shadow>();
-        shadow.effectColor = new Color(0f, 0f, 0f, 0.6f);
-        shadow.effectDistance = new Vector2(0f, -4f);
-        shadow.useGraphicAlpha = false;
-
-        return text;
-    }
-
-    // 字体优先级：内置 LegacyRuntime → 场景中已有 Text 的字体 → 系统中文字体
-    private static Font ResolveFont()
-    {
-        if (cachedFont != null) return cachedFont;
-
-        try
-        {
-            cachedFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        }
-        catch (Exception)
-        {
-            cachedFont = null;
-        }
-
-        if (cachedFont == null)
-        {
-            // 兜底 1：复用场景里现成 Text 的字体，保证一定拿得到字体资源
-            var sceneText = FindFirstObjectByType<Text>(FindObjectsInactive.Include);
-            if (sceneText != null) cachedFont = sceneText.font;
-        }
-
-        if (cachedFont == null)
-        {
-            // 兜底 2：内置字体不可用时，直接取系统中文字体（仅极端情况下执行）
-            string[] candidates = { "PingFang SC", "Heiti SC", "Microsoft YaHei", "Noto Sans CJK SC" };
-            string[] installed = Font.GetOSInstalledFontNames();
-            for (int i = 0; i < candidates.Length; i++)
-            {
-                if (Array.IndexOf(installed, candidates[i]) >= 0)
-                {
-                    cachedFont = Font.CreateDynamicFontFromOSFont(candidates[i], 64);
-                    break;
-                }
-            }
-        }
-
-        return cachedFont;
-    }
-
-    // 运行时生成 1x1 白色 Sprite 并缓存
-    private static Sprite GetWhiteSprite()
-    {
-        if (cachedWhiteSprite != null) return cachedWhiteSprite;
-
-        var tex = Texture2D.whiteTexture;
-        cachedWhiteSprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height),
-            new Vector2(0.5f, 0.5f), 100f);
-        cachedWhiteSprite.name = "MetaShopWhite";
-        return cachedWhiteSprite;
     }
 }

@@ -17,3 +17,16 @@
 - **Small Monsters (Animation)** — by **hansolo**（CC-BY 3.0）
   https://opengameart.org/content/small-monsters-animation
   火蚁行走动画（自爆怪），3 帧，48×24/帧
+
+## UI 素材
+- **Kenney — Pixel UI Pack**（CC0）
+  https://kenney.nl/assets/pixel-ui-pack
+  9-slice 面板 / 按钮；已按暗金主题染色
+- **Kenney — Fantasy UI Borders**（CC0）
+  https://kenney.nl/assets/fantasy-ui-borders
+  装饰边框；部分 PNG 已导入
+
+## 中文 UI 字体
+- **Noto Serif SC**（SIL Open Font License 1.1）
+  https://fonts.google.com/noto/specimen/Noto+Serif+SC
+  由 Google Fonts 的 NotoSerifSC 变量字体生成项目用子集；许可证见 `Assets/Fonts/NotoSerifSC-OFL.txt`
