@@ -62,7 +62,23 @@ public class GameManager : MonoBehaviour
             isTitleScreen = true;
             titleScreen.SetActive(true);
             Time.timeScale = 0f;
+            ShowOverlayHintsOnTitle();
         }
+    }
+
+    // 标题页补充浮层入口提示（TAB SHOP / C CHARACTER）；缺哪条补哪条，避免重复叠加。
+    // 标题字体是 Cinzel（仅拉丁字形），因此这里用英文提示，中文说明放在浮层内部。
+    void ShowOverlayHintsOnTitle()
+    {
+        if (titleScreen == null) return;
+        var controller = titleScreen.GetComponent<TitleScreenController>();
+        if (controller == null || controller.subtitle == null) return;
+
+        var subtitle = controller.subtitle;
+        string hint = subtitle.text;
+        if (!hint.Contains("TAB")) hint += "  ·  TAB SHOP";
+        if (!hint.Contains("C CHARACTER")) hint += "  ·  C CHARACTER";
+        subtitle.text = hint;
     }
 
     void StartGame()
@@ -78,7 +94,40 @@ public class GameManager : MonoBehaviour
         var kb = UnityEngine.InputSystem.Keyboard.current;
         if (isTitleScreen)
         {
-            if (kb != null && kb.anyKey.wasPressedThisFrame) StartGame();
+            // 选角界面打开时吞掉所有按键：C / ESC 关闭，其余键不会开始游戏
+            if (CharacterSelectScreen.IsOpen)
+            {
+                if (kb != null && (kb.cKey.wasPressedThisFrame || kb.escapeKey.wasPressedThisFrame))
+                    CharacterSelectScreen.Hide();
+                return;
+            }
+
+            // 商店打开时吞掉所有按键：TAB / ESC 关闭，其余键不会开始游戏
+            if (MetaShopScreen.IsOpen)
+            {
+                if (kb != null && (kb.tabKey.wasPressedThisFrame || kb.escapeKey.wasPressedThisFrame))
+                    MetaShopScreen.Hide();
+                return;
+            }
+
+            if (kb != null)
+            {
+                // TAB / C 优先于「任意键开始」：打开浮层的那一帧不能同时开局。
+                // 两个浮层互斥，打开前先关掉另一个。
+                if (kb.tabKey.wasPressedThisFrame)
+                {
+                    CharacterSelectScreen.Hide();
+                    MetaShopScreen.Show();
+                    return;
+                }
+                if (kb.cKey.wasPressedThisFrame)
+                {
+                    MetaShopScreen.Hide();
+                    CharacterSelectScreen.Show();
+                    return;
+                }
+                if (kb.anyKey.wasPressedThisFrame) StartGame();
+            }
             return;
         }
         if (kb != null)

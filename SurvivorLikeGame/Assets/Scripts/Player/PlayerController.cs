@@ -37,6 +37,16 @@ public class PlayerController : MonoBehaviour
         weaponManager = GetComponent<WeaponManager>();
         stats = GetComponent<PlayerStats>();
         if (stats == null) stats = gameObject.AddComponent<PlayerStats>();
+
+        // 应用局外永久升级；必须在 currentHealth 初始化之前，
+        // 否则生命上限加成不会体现在本局满血值上。
+        MetaProgress.ApplyPermanentStats(this, stats, GetComponent<ExpPickupRadius>());
+
+        // 角色初始加成叠加在永久升级之后，同样要在满血初始化前完成
+        CharacterSelection.ApplyTo(this, stats, GetComponent<ExpPickupRadius>());
+
+        // 负生命上限的角色（如玻璃大炮）也至少保留 1 点
+        maxHealth = Mathf.Max(1, maxHealth);
         currentHealth = maxHealth;
     }
 
