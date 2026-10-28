@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e388fa14ae4e845568f3d3fd2e2afc59, type: 3}
+  m_Name: hard
+  m_EditorClassIdentifier: Assembly-CSharp::DifficultyData
+  id: hard
+  displayName: "\u56F0\u96BE"
+  description: "\u56F0\u96BE\uFF1A\u654C\u4EBA\u8840\u91CF \xD71.5\u3001\u4F24\u5BB3
+    \xD71.25\u3001\u901F\u5EA6 \xD71.1\uFF0C\u91D1\u5E01 \xD71.25\u3002"
+  enemyHealthMultiplier: 1.5
+  enemyDamageMultiplier: 1.25
+  enemySpeedMultiplier: 1.1
+  coinMultiplier: 1.25
+  unlockedByDefault: 0
+  unlockCost: 30

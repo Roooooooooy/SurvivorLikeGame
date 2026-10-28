@@ -16,6 +16,8 @@ MonoBehaviour:
   displayName: "\u5747\u8861\u8005"
   description: "\u653B\u5B88\u517C\u5907\u7684\u65B0\u624B\u89D2\u8272\uFF0C\u9002\u5408\u6240\u6709\u6B66\u5668\u6D41\u6D3E\u3002"
   passiveDescription: "\u521D\u59CB\u643A\u5E26\u73AF\u7ED5\u6CD5\u7403\uFF0C\u751F\u547D\u4E0E\u4F24\u5BB3\u5C0F\u5E45\u63D0\u5347\u3002"
+  unlockedByDefault: 1
+  unlockCost: 0
   initialWeapon: 1
   maxHealthFlat: 10
   damagePct: 0.05

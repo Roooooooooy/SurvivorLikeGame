@@ -36,7 +36,11 @@
 - [x] `PlayerPrefs` 持久化累计金币（永久属性、已解锁内容待 Meta-B）
 - [x] 永久商店 UI：金币购买永久属性（`MetaShopScreen`，标题页 TAB 打开，7 项升级）
 - [x] 永久属性写入 `PlayerStats` 初始值（`MetaProgress.ApplyPermanentStats`，新局 `PlayerController.Start` 应用）
-- [ ] 解锁项：新武器、新角色、更高难度档位（`IsUnlocked/Unlock` 存储已就绪，待接入具体内容）
+- [x] 解锁项：新角色（均衡默认；玻璃大炮 30 金币、坦克 50 金币）
+- [x] 解锁项：难度档位（困难 30 金币、噩梦 80 金币）
+- [ ] 解锁项：新武器（待武器 id 门槛接入）
+- [x] 难度档位：普通/困难/噩梦，敌人 HP/伤害/速度与金币倍率；标题页按 D 选择
+- [ ] 更高难度/无尽模式
 - [ ] 商店视觉打磨与截图留档
 - [ ] Meta 存档迁移逻辑（版本键已写入，待需要时实现）
 - [ ] 结算界面的 R 键路径单独验证（当前按钮路径已验证）
@@ -50,7 +54,7 @@
 - [x] 选角界面（标题页按 C 打开，运行时 Canvas，与 TAB 商店互斥）
 - [x] `PlayerController` 按所选角色初始化（`MetaProgress` 永久属性之后、满血之前应用）
 - [x] 至少 3 个角色：均衡（Orb）、玻璃大炮（Projectile + 伤害/暴击）、坦克（高护甲 + 拾取范围）
-- [ ] 角色解锁接入 `MetaProgress.IsUnlocked`（Meta-B2）
+- [x] 角色解锁接入 `MetaProgress.IsUnlocked`（Meta-B2：锁定角色显示价格，金币解锁后可选）
 - [ ] 更多角色与角色专属初始武器（当前仅 Orb/Projectile）
 - [ ] 角色立绘/头像与更强的机制型被动（当前以数值加成为主）
 

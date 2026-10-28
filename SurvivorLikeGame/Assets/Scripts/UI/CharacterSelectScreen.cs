@@ -25,20 +25,25 @@ public class CharacterSelectScreen : MonoBehaviour
     // 选角界面是否打开：GameManager 用它判断是否吞掉「任意键开始」
     public static bool IsOpen { get; private set; }
 
-    // 一张角色卡片的 UI 引用；数据只读，刷新时重新向 CharacterSelection 取选中状态
+    // 一张角色卡片的 UI 引用；数据只读，刷新时重新向 CharacterSelection 取选中/解锁状态
     private sealed class CharacterRow
     {
         public CharacterData data;
         public Image background;
         public Image accent;
         public Text nameText;
+        public Text lockText;        // 锁定态价格提示
         public Button selectButton;
         public Text selectLabel;
+        public Button unlockButton;  // 仅锁定态显示
+        public Text unlockLabel;
     }
 
     private readonly List<CharacterRow> rows = new List<CharacterRow>();
     private CharacterData[] characters = new CharacterData[0];
     private Text currentText;
+    private Text coinsText;          // 底部右侧：累计金币余额
+    private Text messageText;        // 底部右侧：解锁/失败提示
     private bool built;
 
     // 关闭域重载时静态字段会跨 Play 保留，这里回到初始状态，避免下次进入 Play 时残留 IsOpen=true
@@ -200,6 +205,15 @@ public class CharacterSelectScreen : MonoBehaviour
         CreateText("KeyHint", panel.transform, font, 22, new Vector2(420f, 40f),
             new Vector2(-halfWidth + 40f + 210f, -halfHeight + 38f), FontStyle.Normal,
             new Color(0.86f, 0.83f, 0.78f, 0.7f), TextAnchor.MiddleLeft).text = "C / ESC 关闭";
+
+        // 底部右侧：累计金币余额（解锁角色时扣费）与一行操作结果提示
+        coinsText = CreateText("Coins", panel.transform, font, 22, new Vector2(440f, 36f),
+            new Vector2(halfWidth - 40f - 220f, -halfHeight + 66f), FontStyle.Bold,
+            new Color(0.90f, 0.78f, 0.45f, 1f), TextAnchor.MiddleRight);
+
+        messageText = CreateText("Message", panel.transform, font, 20, new Vector2(440f, 32f),
+            new Vector2(halfWidth - 40f - 220f, -halfHeight + 30f), FontStyle.Normal,
+            new Color(0.86f, 0.83f, 0.78f, 0.85f), TextAnchor.MiddleRight);
     }
 
     // 读 CharacterSelection.All；空数据是合法状态（UI 走空态兜底）
@@ -264,10 +278,20 @@ public class CharacterSelectScreen : MonoBehaviour
             new Color(0.90f, 0.78f, 0.45f, 1f), TextAnchor.MiddleRight).text =
             "初始武器  " + (data != null ? WeaponName(data.initialWeapon) : "—");
 
+        // 解锁态提示（右中）：仅锁定角色显示，文案含金币价格
+        row.lockText = CreateText("Lock", bg.transform, font, 18, new Vector2(300f, 32f),
+            new Vector2(320f, 6f), FontStyle.Bold, new Color(0.78f, 0.42f, 0.36f, 1f),
+            TextAnchor.MiddleRight);
+
+        // UNLOCK 按钮（SELECT 左侧）：仅锁定角色显示
+        row.unlockButton = CreateUnlockButton(bg.transform, font, new Vector2(95f, -42f), out row.unlockLabel);
+
         // SELECT 按钮（右下）
         row.selectButton = CreateSelectButton(bg.transform, font, new Vector2(280f, -42f), out row.selectLabel);
+
         var captured = row;
         row.selectButton.onClick.AddListener(() => OnSelectClicked(captured));
+        row.unlockButton.onClick.AddListener(() => OnUnlockClicked(captured));
 
         rows.Add(row);
     }
@@ -299,6 +323,36 @@ public class CharacterSelectScreen : MonoBehaviour
         label = CreateText("Text", rt, font, 22, new Vector2(170f, 50f), Vector2.zero,
             FontStyle.Bold, new Color(0.96f, 0.93f, 0.86f, 1f), TextAnchor.MiddleCenter);
         label.text = "SELECT";
+        return button;
+    }
+
+    // 解锁按钮：与 SELECT 同尺寸，用暗金色区分「消费金币」的操作
+    private Button CreateUnlockButton(Transform parent, Font font, Vector2 anchoredPos, out Text label)
+    {
+        var go = new GameObject("UnlockButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+        go.transform.SetParent(parent, false);
+
+        var rt = go.GetComponent<RectTransform>();
+        SetCentered(rt, 170f, 56f, anchoredPos);
+
+        var image = go.GetComponent<Image>();
+        image.sprite = GetWhiteSprite();
+        image.color = new Color(0.30f, 0.26f, 0.13f, 1f);
+        image.raycastTarget = true;
+
+        var button = go.GetComponent<Button>();
+        button.targetGraphic = image;
+        var colors = button.colors;
+        colors.normalColor = new Color(0.30f, 0.26f, 0.13f, 1f);
+        colors.highlightedColor = new Color(0.46f, 0.38f, 0.18f, 1f);
+        colors.pressedColor = new Color(0.18f, 0.15f, 0.08f, 1f);
+        colors.selectedColor = colors.normalColor;
+        colors.disabledColor = new Color(0.18f, 0.17f, 0.15f, 0.9f);
+        button.colors = colors;
+
+        label = CreateText("Text", rt, font, 20, new Vector2(160f, 50f), Vector2.zero,
+            FontStyle.Bold, new Color(0.96f, 0.90f, 0.72f, 1f), TextAnchor.MiddleCenter);
+        label.text = "UNLOCK";
         return button;
     }
 
@@ -335,18 +389,23 @@ public class CharacterSelectScreen : MonoBehaviour
     {
         var selected = CharacterSelection.Selected;
         string selectedId = CurrentSelectedId();
+        int coins = MetaProgress.TotalCoins;
 
         if (currentText != null)
             currentText.text = selected != null ? "当前角色  " + DisplayName(selected) : "当前角色  —";
+        if (coinsText != null)
+            coinsText.text = "累计金币  " + coins;
 
         for (int i = 0; i < rows.Count; i++)
         {
             var row = rows[i];
             if (row.data == null) continue;
 
-            bool isSelected = !string.IsNullOrEmpty(selectedId) && row.data.id == selectedId;
+            bool unlocked = CharacterSelection.IsUnlocked(row.data);
+            // 锁定角色永远不会被高亮为当前选中，即使存档里残留着它的 id
+            bool isSelected = unlocked && !string.IsNullOrEmpty(selectedId) && row.data.id == selectedId;
 
-            // 选中卡片：暖棕底色 + 金色左侧竖条 + 金色名字
+            // 选中卡片：暖棕底色 + 金色左侧竖条 + 金色名字；锁定卡片整体压暗
             row.background.color = isSelected
                 ? new Color(0.24f, 0.19f, 0.11f, 0.95f)
                 : (i % 2 == 0
@@ -354,25 +413,100 @@ public class CharacterSelectScreen : MonoBehaviour
                     : new Color(0.095f, 0.088f, 0.08f, 0.9f));
             row.accent.color = isSelected
                 ? new Color(0.90f, 0.78f, 0.45f, 1f)
-                : new Color(0.30f, 0.25f, 0.20f, 0.9f);
+                : unlocked
+                    ? new Color(0.30f, 0.25f, 0.20f, 0.9f)
+                    : new Color(0.36f, 0.24f, 0.22f, 0.9f);
             row.nameText.color = isSelected
                 ? new Color(0.96f, 0.90f, 0.72f, 1f)
-                : new Color(0.96f, 0.93f, 0.86f, 1f);
+                : unlocked
+                    ? new Color(0.96f, 0.93f, 0.86f, 1f)
+                    : new Color(0.70f, 0.67f, 0.62f, 0.9f);
 
-            row.selectLabel.text = isSelected ? "已选择" : "SELECT";
-            row.selectLabel.color = isSelected
-                ? new Color(0.96f, 0.90f, 0.72f, 1f)
-                : new Color(0.96f, 0.93f, 0.86f, 1f);
-            row.selectButton.interactable = !isSelected;
+            var buttonColors = row.selectButton.colors;
+            if (!unlocked)
+            {
+                int cost = Mathf.Max(0, row.data.unlockCost);
+                bool affordable = coins >= cost;
+
+                // 价格提示：余额足够金色，不足转红
+                row.lockText.gameObject.SetActive(true);
+                row.lockText.text = "未解锁 · 需要 " + cost + " 金币";
+                row.lockText.color = affordable
+                    ? new Color(0.90f, 0.78f, 0.45f, 1f)
+                    : new Color(0.78f, 0.42f, 0.36f, 1f);
+
+                row.unlockButton.gameObject.SetActive(true);
+                row.unlockLabel.text = "UNLOCK";
+                row.unlockLabel.color = affordable
+                    ? new Color(0.96f, 0.90f, 0.72f, 1f)
+                    : new Color(0.62f, 0.59f, 0.54f, 0.85f);
+                row.unlockButton.interactable = affordable; // 金币不足时不可点
+
+                // 锁定态的 SELECT 保持可见但不可用
+                row.selectButton.interactable = false;
+                row.selectLabel.text = "未解锁";
+                row.selectLabel.color = new Color(0.62f, 0.59f, 0.54f, 0.85f);
+                buttonColors.disabledColor = new Color(0.16f, 0.15f, 0.14f, 0.95f);
+            }
+            else
+            {
+                row.lockText.gameObject.SetActive(false);
+                row.unlockButton.gameObject.SetActive(false);
+
+                row.selectLabel.text = isSelected ? "已选择" : "SELECT";
+                row.selectLabel.color = isSelected
+                    ? new Color(0.96f, 0.90f, 0.72f, 1f)
+                    : new Color(0.96f, 0.93f, 0.86f, 1f);
+                row.selectButton.interactable = !isSelected;
+                // 已选中时禁用色用暖金，与锁定态的灰色区分
+                buttonColors.disabledColor = new Color(0.32f, 0.26f, 0.14f, 0.95f);
+            }
+            row.selectButton.colors = buttonColors;
         }
     }
 
     private void OnSelectClicked(CharacterRow row)
     {
         if (row == null || row.data == null) return;
+        // 锁定角色拒绝选择：Select 本身也会拦截，这里提前返回避免刷新出误导性状态
+        if (!CharacterSelection.IsUnlocked(row.data)) return;
+
         // 持久化由 CharacterSelection.Select 负责（PlayerPrefs + Save）
         CharacterSelection.Select(row.data.id);
         Refresh();
+    }
+
+    // 解锁购买：先扣金币，成功后再写解锁标记；任一步失败都不改变解锁状态
+    private void OnUnlockClicked(CharacterRow row)
+    {
+        if (row == null || row.data == null) return;
+        if (CharacterSelection.IsUnlocked(row.data))
+        {
+            Refresh();
+            return;
+        }
+
+        int cost = Mathf.Max(0, row.data.unlockCost);
+        if (MetaProgress.TrySpendCoins(cost))
+        {
+            MetaProgress.Unlock(CharacterSelection.UnlockKey(row.data.id));
+            ShowMessage("已解锁：" + DisplayName(row.data), true);
+        }
+        else
+        {
+            ShowMessage("金币不足，还差 " + (cost - MetaProgress.TotalCoins) + " 金币", false);
+        }
+
+        Refresh(); // 成功时同步余额与锁定态；失败时也刷新，保持与存档一致
+    }
+
+    private void ShowMessage(string text, bool success)
+    {
+        if (messageText == null) return;
+        messageText.text = text;
+        messageText.color = success
+            ? new Color(0.55f, 0.85f, 0.55f, 1f)
+            : new Color(0.90f, 0.45f, 0.40f, 1f);
     }
 
     // SelectedId 在未存档时会回落到第一个角色，正好用于默认高亮
