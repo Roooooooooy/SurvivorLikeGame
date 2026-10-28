@@ -6,6 +6,8 @@ using UnityEngine.UI;
 // 波次横幅的运行时实现：懒加载一套 Canvas + 主/副标题 Text + CanvasGroup，
 // 按 FIFO 队列依次播放「淡入 → 停留 → 淡出」，全程使用 unscaled 时间，
 // 因此升级暂停（timeScale = 0）或首页停留时也能正常播放。
+// 视觉统一走 UITheme / UIFactory：标题用 DisplayFont，副标题用 BodyFont，
+// 中文文案由 UITheme.ResolveFont 自动切到随包的 CJK 子集字体。
 public class WaveBannerView : MonoBehaviour
 {
     // 一次 Show 请求；用 struct 避免排队时产生额外托管对象
@@ -21,7 +23,6 @@ public class WaveBannerView : MonoBehaviour
     private const int CanvasSortingOrder = 100;   // 压在 HUD 之上、死亡遮罩之下
 
     private static WaveBannerView instance;
-    private static Font cachedFont;
 
     private readonly Queue<Request> queue = new Queue<Request>(4);
 
@@ -42,6 +43,13 @@ public class WaveBannerView : MonoBehaviour
             }
             return instance;
         }
+    }
+
+    // 关闭域重载时清掉静态缓存，避免跨 Play 残留
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        instance = null;
     }
 
     // 供 WaveBanner 调用：排入队列；空闲时立即开始播放
@@ -100,90 +108,26 @@ public class WaveBannerView : MonoBehaviour
         canvasGroup.interactable = false;
         canvasGroup.blocksRaycasts = false;
 
-        var font = ResolveFont();
+        var theme = UITheme.Current;
+        Color titleColor = theme != null ? theme.goldHi : new Color(0.91f, 0.83f, 0.63f, 1f);
+        Color subtitleColor = theme != null ? theme.tealHi : new Color(0.56f, 0.75f, 0.72f, 1f);
 
         // 主标题：顶部居中，锚点 top-center，y 约 -80
-        titleText = CreateText("Title", font, 64, new Vector2(1400f, 100f), new Vector2(0f, -80f),
-            FontStyle.Bold, new Color(0.96f, 0.93f, 0.86f, 1f));
-        // 副标题：主标题正下方，字号略小、略暗
-        subtitleText = CreateText("Subtitle", font, 30, new Vector2(1400f, 50f), new Vector2(0f, -180f),
-            FontStyle.Normal, new Color(0.86f, 0.83f, 0.78f, 0.9f));
+        titleText = CreateBannerText("Title", 64, new Vector2(1400f, 100f), new Vector2(0f, -170f),
+            titleColor, true, FontStyle.Bold);
+        // 副标题：主标题正下方，字号略小、语义色 teal
+        subtitleText = CreateBannerText("Subtitle", 30, new Vector2(1400f, 50f), new Vector2(0f, -260f),
+            subtitleColor, false, FontStyle.Normal);
     }
 
-    private Text CreateText(string name, Font font, int fontSize, Vector2 size, Vector2 anchoredPos,
-        FontStyle style, Color color)
+    private Text CreateBannerText(string name, int size, Vector2 rectSize, Vector2 anchoredPos,
+        Color color, bool display, FontStyle style)
     {
-        var go = new GameObject(name, typeof(RectTransform), typeof(Text));
-        go.transform.SetParent(transform, false);
-
-        var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.5f, 1f);
-        rt.anchorMax = new Vector2(0.5f, 1f);
-        rt.pivot = new Vector2(0.5f, 1f);
-        rt.sizeDelta = size;
-        rt.anchoredPosition = anchoredPos;
-
-        var text = go.GetComponent<Text>();
-        text.font = font;
-        text.fontSize = fontSize;
-        text.fontStyle = style;
-        text.color = color;
-        text.alignment = TextAnchor.MiddleCenter;
-        text.horizontalOverflow = HorizontalWrapMode.Overflow;
-        text.verticalOverflow = VerticalWrapMode.Overflow;
-        text.raycastTarget = false;
-
-        // 描边 + 投影，深色背景上也能看清
-        var outline = go.AddComponent<Outline>();
-        outline.effectColor = new Color(0f, 0f, 0f, 0.85f);
-        outline.effectDistance = new Vector2(2f, -2f);
-        outline.useGraphicAlpha = false;
-
-        var shadow = go.AddComponent<Shadow>();
-        shadow.effectColor = new Color(0f, 0f, 0f, 0.6f);
-        shadow.effectDistance = new Vector2(0f, -4f);
-        shadow.useGraphicAlpha = false;
-
+        var text = UIFactory.CreateText(transform, name, string.Empty, size, color,
+            TextAnchor.MiddleCenter, display, style);
+        UIFactory.SetRect(text.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+            rectSize, anchoredPos);
         return text;
-    }
-
-    // 字体优先级：内置 LegacyRuntime → 场景中已有 Text 的字体 → 系统中文字体
-    private static Font ResolveFont()
-    {
-        if (cachedFont != null) return cachedFont;
-
-        try
-        {
-            cachedFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        }
-        catch (System.Exception)
-        {
-            cachedFont = null;
-        }
-
-        if (cachedFont == null)
-        {
-            // 兜底 1：复用场景里现成 Text 的字体，保证一定拿得到字体资源
-            var sceneText = FindFirstObjectByType<Text>(FindObjectsInactive.Include);
-            if (sceneText != null) cachedFont = sceneText.font;
-        }
-
-        if (cachedFont == null)
-        {
-            // 兜底 2：内置字体不可用时，直接取系统中文字体（仅极端情况下执行）
-            string[] candidates = { "PingFang SC", "Heiti SC", "Microsoft YaHei", "Noto Sans CJK SC" };
-            string[] installed = Font.GetOSInstalledFontNames();
-            for (int i = 0; i < candidates.Length; i++)
-            {
-                if (System.Array.IndexOf(installed, candidates[i]) >= 0)
-                {
-                    cachedFont = Font.CreateDynamicFontFromOSFont(candidates[i], 64);
-                    break;
-                }
-            }
-        }
-
-        return cachedFont;
     }
 
     // 队列播放：每条横幅完整走完淡入/停留/淡出后，再播放下一条
@@ -194,8 +138,8 @@ public class WaveBannerView : MonoBehaviour
         while (queue.Count > 0)
         {
             var request = queue.Dequeue();
-            titleText.text = request.Title;
-            subtitleText.text = request.Subtitle ?? string.Empty;
+            SetBannerText(titleText, request.Title, true);
+            SetBannerText(subtitleText, request.Subtitle ?? string.Empty, false);
 
             // 淡入
             float t = 0f;
@@ -227,6 +171,14 @@ public class WaveBannerView : MonoBehaviour
         }
 
         running = false;
+    }
+
+    // 写入文案并交给主题按内容选字体（英文用 Cinzel/VT323，中文用 CJK 子集）
+    private static void SetBannerText(Text text, string value, bool display)
+    {
+        text.text = value;
+        var theme = UITheme.Current;
+        if (theme != null) text.font = theme.ResolveFont(value, display);
     }
 
     // smoothstep 缓动，和 TitleScreenController / YouDiedAnimator 保持一致

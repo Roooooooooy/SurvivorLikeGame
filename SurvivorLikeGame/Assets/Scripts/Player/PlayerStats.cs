@@ -17,11 +17,17 @@ public class PlayerStats : MonoBehaviour
     public float expMultiplier = 1f;
     public float moveSpeedMultiplier = 1f;
 
-    // 计算一次伤害：全局加成 + 暴击判定
-    public int RollDamage(int baseDamage)
+    // 兼容旧调用：不关心暴击标记时直接返回伤害
+    public int RollDamage(int baseDamage) => RollDamage(baseDamage, out _);
+
+    // 计算一次伤害：全局加成 + 暴击判定，并输出是否暴击供表现层使用。
+    // 只做一次随机判定，数值与概率和旧实现完全一致。
+    public int RollDamage(int baseDamage, out bool crit)
     {
+        crit = Random.value < critChance;
+
         float dmg = baseDamage * damageMultiplier;
-        if (Random.value < critChance) dmg *= critMultiplier;
+        if (crit) dmg *= critMultiplier;
         return Mathf.Max(1, Mathf.RoundToInt(dmg));
     }
 }

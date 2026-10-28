@@ -31,13 +31,15 @@ public class DamageDealer : MonoBehaviour
             ? col.radius * Mathf.Max(transform.lossyScale.x, transform.lossyScale.y)
             : 0.5f;
 
-        int dmg = sourceStats != null ? sourceStats.RollDamage(damage) : damage;
+        // 暴击标记随伤害一起带给表现层（伤害数字/顿帧/震屏），不改变伤害数值与概率
+        bool crit = false;
+        int dmg = sourceStats != null ? sourceStats.RollDamage(damage, out crit) : damage;
         int hits = sim.DamageInCircle(transform.position, radius, dmg, isContinuous);
 
         if (hits > 0)
         {
             // 命中事件交给表现层（音效/伤害数字/震屏）订阅
-            CombatEvents.RaiseHit(transform.position, dmg);
+            CombatEvents.RaiseHit(transform.position, dmg, crit);
 
             // 池化飞弹归还对象池；未池化对象由 Release 内部退回 Destroy，保持旧行为
             if (destroyOnHit && !isContinuous) SmallObjectPool.Release(gameObject);

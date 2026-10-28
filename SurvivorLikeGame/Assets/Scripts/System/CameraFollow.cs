@@ -2,7 +2,6 @@ using UnityEngine;
 
 public class CameraFollow : MonoBehaviour
 {
-    public float smoothSpeed = 5f;
     private Transform target;
 
     void Start()
@@ -20,7 +19,9 @@ public class CameraFollow : MonoBehaviour
             return;
         }
 
+        // 紧密跟随：不做平滑滞后，避免移动时主角相对地面漂移。
+        // 震屏仍叠加在真实目标位置上，下一帧直接覆盖，不会污染基准位置。
         Vector3 desired = new Vector3(target.position.x, target.position.y, transform.position.z);
-        transform.position = Vector3.Lerp(transform.position, desired, smoothSpeed * Time.deltaTime);
+        transform.position = desired + CameraShake.Offset;
     }
 }

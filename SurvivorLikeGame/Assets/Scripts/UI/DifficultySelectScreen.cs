@@ -8,6 +8,7 @@ using UnityEngine.UI;
 // 难度列表来自 DifficultySelection.All，选择结果由 DifficultySelection.Select 持久化；
 // 解锁走 MetaProgress.TrySpendCoins + Unlock("difficulty_<id>")，与角色/商店共用同一套存档。
 // 开关由 GameManager 的标题页输入统一调度（D 打开，D / ESC 关闭），并与永久商店、选角界面互斥。
+// 视觉统一走 UITheme / UIFactory：金色标题、分隔线、暗色九宫格面板与主题按钮。
 public class DifficultySelectScreen : MonoBehaviour
 {
     private const int CanvasSortingOrder = 320;        // 高于选角界面(310)，难度界面压在最上层
@@ -22,8 +23,6 @@ public class DifficultySelectScreen : MonoBehaviour
     private const float ActionButtonX = 360f;          // 操作按钮横向位置：行右侧留 30px 内边距
 
     private static DifficultySelectScreen instance;
-    private static Font cachedFont;
-    private static Sprite cachedWhiteSprite;
 
     // 难度界面是否打开：GameManager 用它判断是否吞掉「任意键开始」
     public static bool IsOpen { get; private set; }
@@ -35,6 +34,8 @@ public class DifficultySelectScreen : MonoBehaviour
         public Image background;
         public Image accent;
         public Text nameText;
+        public Text descText;
+        public Text infoText;
         public Text statusText;
         public Button actionButton;
         public Text actionLabel;
@@ -52,8 +53,6 @@ public class DifficultySelectScreen : MonoBehaviour
     {
         instance = null;
         IsOpen = false;
-        cachedFont = null;
-        cachedWhiteSprite = null;
     }
 
     // ---------------- 对外入口 ----------------
@@ -150,7 +149,12 @@ public class DifficultySelectScreen : MonoBehaviour
         // SELECT / UNLOCK / 关闭按钮需要点击事件（事件系统由场景提供）
         gameObject.AddComponent<GraphicRaycaster>();
 
-        var font = ResolveFont();
+        var theme = UITheme.Current;
+        Color gold = theme != null ? theme.gold : new Color(0.79f, 0.66f, 0.42f, 1f);
+        Color goldHi = theme != null ? theme.goldHi : new Color(0.91f, 0.83f, 0.63f, 1f);
+        Color parchment = theme != null ? theme.parchment : new Color(0.85f, 0.82f, 0.76f, 1f);
+        Color muted = theme != null ? theme.muted : new Color(0.56f, 0.55f, 0.50f, 1f);
+        Color borderColor = theme != null ? theme.WithAlpha(theme.gold, 0.65f) : new Color(0.30f, 0.25f, 0.20f, 0.92f);
 
         // 读取难度数据并按行数计算面板高度：条目多时自动压缩行高，避免溢出屏幕
         LoadDifficulties();
@@ -164,59 +168,64 @@ public class DifficultySelectScreen : MonoBehaviour
         float halfWidth = PanelWidth * 0.5f;
 
         // 全屏深色遮罩：盖住标题页，同时吞掉鼠标点击
-        var scrim = CreateImage("Scrim", transform, new Color(0f, 0f, 0f, 0.78f));
-        Stretch(scrim.rectTransform);
-        scrim.raycastTarget = true;
+        var scrim = UIFactory.CreateImage(transform, "Scrim", null, new Color(0f, 0f, 0f, 0.78f),
+            false, true);
+        UIFactory.Stretch(scrim.rectTransform);
 
-        // 面板外框 + 内衬，沿用黑魂风的暗色金属边框
-        var border = CreateImage("PanelBorder", transform, new Color(0.30f, 0.25f, 0.20f, 0.92f));
+        // 面板外框（九宫格 border_010）+ 内衬（panel_tan）
+        var border = UIFactory.CreateImage(transform, "PanelBorder",
+            theme != null ? theme.frameSprite : null, borderColor, true, false);
         SetCentered(border.rectTransform, PanelWidth + 30f, panelHeight + 30f, Vector2.zero);
 
-        var panel = CreateImage("Panel", border.transform, new Color(0.075f, 0.07f, 0.065f, 0.97f));
+        var panel = UIFactory.CreatePanel(border.transform, "Panel");
         SetCentered(panel.rectTransform, PanelWidth, panelHeight, Vector2.zero);
         panel.raycastTarget = true;
 
-        // 标题（左）
-        CreateText("Title", panel.transform, font, 46, new Vector2(360f, 64f),
-            new Vector2(-300f, halfHeight - 58f), FontStyle.Bold, new Color(0.96f, 0.93f, 0.86f, 1f),
-            TextAnchor.MiddleLeft).text = "选择难度";
+        // 标题（左，金色）
+        var title = UIFactory.CreateText(panel.transform, "Title", "选择难度", 46,
+            goldHi, TextAnchor.MiddleLeft, true, FontStyle.Bold);
+        SetCentered(title.rectTransform, 360f, 64f, new Vector2(-300f, halfHeight - 58f));
 
-        // 累计金币（右上，靠内）
-        coinsText = CreateText("Coins", panel.transform, font, 26, new Vector2(360f, 48f),
-            new Vector2(120f, halfHeight - 58f), FontStyle.Bold, new Color(0.90f, 0.78f, 0.45f, 1f),
-            TextAnchor.MiddleRight);
+        // 累计金币（右上，靠内，语义色 gold）
+        coinsText = UIFactory.CreateText(panel.transform, "Coins", string.Empty, 26,
+            gold, TextAnchor.MiddleRight, false, FontStyle.Bold);
+        SetCentered(coinsText.rectTransform, 360f, 48f, new Vector2(120f, halfHeight - 58f));
 
         // 关闭按钮（最右上角）
-        CreateCloseButton(panel.transform, font, new Vector2(halfWidth - 100f, halfHeight - 58f));
+        CreateCloseButton(panel.transform, new Vector2(halfWidth - 100f, halfHeight - 58f));
 
         // 标题下的分隔线
-        var divider = CreateImage("Divider", panel.transform, new Color(0.42f, 0.36f, 0.28f, 0.9f));
+        var divider = UIFactory.CreateImage(panel.transform, "Divider", null,
+            theme != null ? theme.WithAlpha(gold, 0.55f) : new Color(0.42f, 0.36f, 0.28f, 0.9f),
+            false, false);
         SetCentered(divider.rectTransform, PanelWidth - 80f, 2f, new Vector2(0f, halfHeight - 100f));
 
         // 难度行：从分隔线下方开始逐行排列
         float firstRowY = halfHeight - HeaderHeight - rowHeight * 0.5f;
         for (int i = 0; i < rowCount; i++)
-            CreateRow(panel.transform, font, difficulties[i], i, firstRowY - i * rowHeight, rowHeight);
+            CreateRow(panel.transform, difficulties[i], i, firstRowY - i * rowHeight, rowHeight);
 
         // 空状态：A 的难度数据尚未就绪时给出明确提示，不崩、不留白板
-        var emptyTitle = CreateText("Empty", panel.transform, font, 30, new Vector2(PanelWidth - 160f, 44f),
-            new Vector2(0f, 6f), FontStyle.Bold, new Color(0.72f, 0.69f, 0.64f, 0.9f), TextAnchor.MiddleCenter);
-        emptyTitle.text = "暂无可用难度";
+        var emptyTitle = UIFactory.CreateText(panel.transform, "Empty", "暂无可用难度", 30,
+            muted, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+        SetCentered(emptyTitle.rectTransform, PanelWidth - 160f, 44f, new Vector2(0f, 6f));
         emptyTitle.gameObject.SetActive(rowCount == 0);
 
-        var emptyHint = CreateText("EmptyHint", panel.transform, font, 18, new Vector2(PanelWidth - 160f, 36f),
-            new Vector2(0f, -34f), FontStyle.Normal, new Color(0.60f, 0.57f, 0.53f, 0.85f), TextAnchor.MiddleCenter);
-        emptyHint.text = "难度数据尚未就绪";
+        var emptyHint = UIFactory.CreateText(panel.transform, "EmptyHint", "难度数据尚未就绪", 18,
+            muted, TextAnchor.MiddleCenter, false, FontStyle.Normal);
+        SetCentered(emptyHint.rectTransform, PanelWidth - 160f, 36f, new Vector2(0f, -34f));
         emptyHint.gameObject.SetActive(rowCount == 0);
 
         // 底部：左侧固定操作提示，右侧显示解锁结果
-        CreateText("KeyHint", panel.transform, font, 22, new Vector2(420f, 40f),
-            new Vector2(-halfWidth + 40f + 210f, -halfHeight + 38f), FontStyle.Normal,
-            new Color(0.86f, 0.83f, 0.78f, 0.7f), TextAnchor.MiddleLeft).text = "D / ESC 关闭";
+        var keyHint = UIFactory.CreateText(panel.transform, "KeyHint", "D / ESC 关闭", 22,
+            muted, TextAnchor.MiddleLeft, false, FontStyle.Normal);
+        SetCentered(keyHint.rectTransform, 420f, 40f,
+            new Vector2(-halfWidth + 40f + 210f, -halfHeight + 38f));
 
-        messageText = CreateText("Message", panel.transform, font, 22, new Vector2(460f, 40f),
-            new Vector2(halfWidth - 40f - 230f, -halfHeight + 38f), FontStyle.Bold,
-            new Color(0.86f, 0.83f, 0.78f, 0.9f), TextAnchor.MiddleRight);
+        messageText = UIFactory.CreateText(panel.transform, "Message", string.Empty, 22,
+            parchment, TextAnchor.MiddleRight, false, FontStyle.Bold);
+        SetCentered(messageText.rectTransform, 460f, 40f,
+            new Vector2(halfWidth - 40f - 230f, -halfHeight + 38f));
     }
 
     // 读 DifficultySelection.All；空数据是合法状态（UI 走空态兜底）
@@ -232,117 +241,121 @@ public class DifficultySelectScreen : MonoBehaviour
         difficulties = list.ToArray();
     }
 
-    private void CreateRow(Transform parent, Font font, DifficultyData data, int index, float y, float rowHeight)
+    private void CreateRow(Transform parent, DifficultyData data, int index, float y, float rowHeight)
     {
+        var theme = UITheme.Current;
         float height = Mathf.Max(64f, rowHeight - 8f);
+        Color parchment = theme != null ? theme.parchment : new Color(0.85f, 0.82f, 0.76f, 1f);
+        Color muted = theme != null ? theme.muted : new Color(0.56f, 0.55f, 0.50f, 1f);
+        Color teal = theme != null ? theme.teal : new Color(0.37f, 0.56f, 0.54f, 1f);
 
         // 交替底色，便于区分相邻行；选中态在 Refresh 里覆盖
-        var bg = CreateImage("Row_" + (data != null ? data.id : index.ToString()), parent,
+        var bg = UIFactory.CreateImage(parent, "Row_" + (data != null ? data.id : index.ToString()),
+            null,
             index % 2 == 0
-                ? new Color(0.115f, 0.105f, 0.095f, 0.9f)
-                : new Color(0.095f, 0.088f, 0.08f, 0.9f));
+                ? (theme != null ? theme.panel2 : new Color(0.08f, 0.11f, 0.15f, 1f))
+                : (theme != null ? theme.panel : new Color(0.06f, 0.08f, 0.11f, 1f)),
+            false, false);
         SetCentered(bg.rectTransform, RowWidth, height, new Vector2(0f, y));
 
         var row = new DifficultyRow { data = data, background = bg };
 
         // 左侧竖条：选中时变亮金色，作为高亮的第二条视觉线索
-        row.accent = CreateImage("Accent", bg.transform, new Color(0.30f, 0.25f, 0.20f, 0.9f));
+        row.accent = UIFactory.CreateImage(bg.transform, "Accent", null,
+            theme != null ? theme.line : new Color(0.15f, 0.19f, 0.24f, 1f), false, false);
         SetCentered(row.accent.rectTransform, 6f, height, new Vector2(-RowWidth * 0.5f + 3f, 0f));
 
         // 名字（左上）
-        row.nameText = CreateText("Name", bg.transform, font, 28, new Vector2(460f, 38f),
-            new Vector2(-210f, height * 0.5f - 30f), FontStyle.Bold,
-            new Color(0.96f, 0.93f, 0.86f, 1f), TextAnchor.MiddleLeft);
-        row.nameText.text = DisplayName(data);
+        row.nameText = UIFactory.CreateText(bg.transform, "Name", DisplayName(data), 28,
+            parchment, TextAnchor.MiddleLeft, false, FontStyle.Bold);
+        SetCentered(row.nameText.rectTransform, 460f, 38f, new Vector2(-210f, height * 0.5f - 30f));
 
         // 描述（中左）：最多两行，超出截断
-        var desc = CreateText("Desc", bg.transform, font, 15, new Vector2(470f, 40f),
-            new Vector2(-210f, 6f), FontStyle.Normal, new Color(0.72f, 0.69f, 0.64f, 0.85f),
-            TextAnchor.MiddleLeft);
-        desc.text = data != null && !string.IsNullOrEmpty(data.description) ? data.description : "—";
-        desc.horizontalOverflow = HorizontalWrapMode.Wrap;
-        desc.verticalOverflow = VerticalWrapMode.Truncate;
+        row.descText = UIFactory.CreateText(bg.transform, "Desc",
+            data != null && !string.IsNullOrEmpty(data.description) ? data.description : "—",
+            15, muted, TextAnchor.MiddleLeft, false, FontStyle.Normal);
+        SetCentered(row.descText.rectTransform, 470f, 40f, new Vector2(-210f, 6f));
+        row.descText.horizontalOverflow = HorizontalWrapMode.Wrap;
+        row.descText.verticalOverflow = VerticalWrapMode.Truncate;
 
-        // 倍率（左下）：敌人 HP / 伤害 / 速度 / 金币，单行展示
-        CreateText("Multipliers", bg.transform, font, 15, new Vector2(520f, 32f),
-            new Vector2(-210f, -height * 0.5f + 22f), FontStyle.Normal,
-            new Color(0.62f, 0.72f, 0.62f, 0.95f), TextAnchor.MiddleLeft).text = MultiplierLine(data);
+        // 倍率（左下）：敌人 HP / 伤害 / 速度 / 金币，单行展示；语义色 teal
+        row.infoText = UIFactory.CreateText(bg.transform, "Multipliers", MultiplierLine(data),
+            15, teal, TextAnchor.MiddleLeft, false, FontStyle.Normal);
+        SetCentered(row.infoText.rectTransform, 520f, 32f,
+            new Vector2(-210f, -height * 0.5f + 22f));
 
         // 状态（右上）：未解锁显示价格，已解锁显示当前状态
-        row.statusText = CreateText("Status", bg.transform, font, 18, new Vector2(260f, 34f),
-            new Vector2(265f, height * 0.5f - 30f), FontStyle.Bold,
-            new Color(0.86f, 0.83f, 0.78f, 0.95f), TextAnchor.MiddleCenter);
+        row.statusText = UIFactory.CreateText(bg.transform, "Status", string.Empty, 18,
+            parchment, TextAnchor.MiddleCenter, false, FontStyle.Bold);
+        SetCentered(row.statusText.rectTransform, 260f, 34f,
+            new Vector2(265f, height * 0.5f - 30f));
 
         // 操作按钮（右下）：UNLOCK / SELECT / 已选择
-        row.actionButton = CreateActionButton(bg.transform, font, new Vector2(ActionButtonX, -height * 0.5f + 38f), out row.actionLabel);
+        row.actionButton = CreateActionButton(bg.transform,
+            new Vector2(ActionButtonX, -height * 0.5f + 38f), out row.actionLabel);
         var captured = row;
         row.actionButton.onClick.AddListener(() => OnActionClicked(captured));
 
         rows.Add(row);
     }
 
-    private Button CreateActionButton(Transform parent, Font font, Vector2 anchoredPos, out Text label)
+    private Button CreateActionButton(Transform parent, Vector2 anchoredPos, out Text label)
     {
-        var go = new GameObject("ActionButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-        go.transform.SetParent(parent, false);
+        var button = UIFactory.CreateButton(parent, "ActionButton", "SELECT",
+            new Vector2(180f, 54f), null);
+        SetCentered(button.GetComponent<RectTransform>(), 180f, 54f, anchoredPos);
+        StyleButton(button);
 
-        var rt = go.GetComponent<RectTransform>();
-        SetCentered(rt, 180f, 54f, anchoredPos);
-
-        var image = go.GetComponent<Image>();
-        image.sprite = GetWhiteSprite();
-        image.color = new Color(0.20f, 0.17f, 0.12f, 1f);
-        image.raycastTarget = true;
-
-        var button = go.GetComponent<Button>();
-        button.targetGraphic = image;
-        var colors = button.colors;
-        colors.normalColor = new Color(0.20f, 0.17f, 0.12f, 1f);
-        colors.highlightedColor = new Color(0.34f, 0.28f, 0.18f, 1f);
-        colors.pressedColor = new Color(0.12f, 0.10f, 0.08f, 1f);
-        colors.selectedColor = colors.normalColor;
-        // 已选中的难度按钮不可点，用暖金色代替灰掉，视觉上表示「当前选择」
-        colors.disabledColor = new Color(0.32f, 0.26f, 0.14f, 0.95f);
-        button.colors = colors;
-
-        label = CreateText("Text", rt, font, 21, new Vector2(170f, 48f), Vector2.zero,
-            FontStyle.Bold, new Color(0.96f, 0.93f, 0.86f, 1f), TextAnchor.MiddleCenter);
-        label.text = "SELECT";
+        label = button.transform.Find("Label").GetComponent<Text>();
+        label.fontSize = 21;
         return button;
     }
 
-    private void CreateCloseButton(Transform parent, Font font, Vector2 anchoredPos)
+    private void CreateCloseButton(Transform parent, Vector2 anchoredPos)
     {
-        var go = new GameObject("CloseButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-        go.transform.SetParent(parent, false);
+        var button = UIFactory.CreateButton(parent, "CloseButton", "关闭",
+            new Vector2(120f, 44f), Hide);
+        SetCentered(button.GetComponent<RectTransform>(), 120f, 44f, anchoredPos);
+        StyleButton(button);
 
-        var rt = go.GetComponent<RectTransform>();
-        SetCentered(rt, 120f, 44f, anchoredPos);
+        var label = button.transform.Find("Label").GetComponent<Text>();
+        label.fontSize = 20;
+        label.color = UITheme.Current != null ? UITheme.Current.goldHi : new Color(0.91f, 0.83f, 0.63f, 1f);
+    }
 
-        var image = go.GetComponent<Image>();
-        image.sprite = GetWhiteSprite();
-        image.color = new Color(0.16f, 0.14f, 0.12f, 1f);
-        image.raycastTarget = true;
-
-        var button = go.GetComponent<Button>();
-        button.targetGraphic = image;
+    // 统一主题交互色：白色常态、金色 hover / pressed
+    private static void StyleButton(Button button)
+    {
+        var theme = UITheme.Current;
         var colors = button.colors;
-        colors.normalColor = new Color(0.16f, 0.14f, 0.12f, 1f);
-        colors.highlightedColor = new Color(0.28f, 0.23f, 0.18f, 1f);
-        colors.pressedColor = new Color(0.10f, 0.09f, 0.08f, 1f);
-        colors.selectedColor = colors.normalColor;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = theme != null ? theme.goldHi : new Color(1f, 0.92f, 0.75f, 1f);
+        colors.selectedColor = Color.white;
+        colors.pressedColor = theme != null ? theme.gold : new Color(0.72f, 0.66f, 0.54f, 1f);
+        colors.disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
         button.colors = colors;
-        button.onClick.AddListener(Hide);
-
-        CreateText("Text", rt, font, 20, new Vector2(110f, 40f), Vector2.zero,
-            FontStyle.Bold, new Color(0.96f, 0.93f, 0.86f, 1f), TextAnchor.MiddleCenter).text = "关闭";
     }
 
     // ---------------- 数据刷新、解锁与选择 ----------------
 
     private void Refresh()
     {
-        if (coinsText != null) coinsText.text = "累计金币  " + MetaProgress.TotalCoins;
+        var theme = UITheme.Current;
+        Color gold = theme != null ? theme.gold : new Color(0.79f, 0.66f, 0.42f, 1f);
+        Color goldHi = theme != null ? theme.goldHi : new Color(0.91f, 0.83f, 0.63f, 1f);
+        Color parchment = theme != null ? theme.parchment : new Color(0.85f, 0.82f, 0.76f, 1f);
+        Color muted = theme != null ? theme.muted : new Color(0.56f, 0.55f, 0.50f, 1f);
+        Color teal = theme != null ? theme.teal : new Color(0.37f, 0.56f, 0.54f, 1f);
+        Color tealHi = theme != null ? theme.tealHi : new Color(0.56f, 0.75f, 0.72f, 1f);
+        Color bloodHi = theme != null ? theme.bloodHi : new Color(0.79f, 0.32f, 0.34f, 1f);
+        Color panel = theme != null ? theme.panel : new Color(0.06f, 0.08f, 0.11f, 1f);
+        Color panel2 = theme != null ? theme.panel2 : new Color(0.08f, 0.11f, 0.15f, 1f);
+
+        if (coinsText != null)
+        {
+            coinsText.text = "累计金币  " + MetaProgress.TotalCoins;
+            ApplyFont(coinsText);
+        }
 
         int coins = MetaProgress.TotalCoins;
         string selectedId = CurrentSelectedId();
@@ -358,41 +371,41 @@ public class DifficultySelectScreen : MonoBehaviour
             // 只有已解锁的难度才可能被选中，避免 A 的兜底 Selected 指向锁定项时误高亮
             bool isSelected = unlocked && !string.IsNullOrEmpty(selectedId) && row.data.id == selectedId;
 
-            // 选中卡片：暖棕底色 + 金色左侧竖条 + 金色名字
+            // 选中卡片：金色基调 + 金色左侧竖条 + 金色名字
             row.background.color = isSelected
-                ? new Color(0.24f, 0.19f, 0.11f, 0.95f)
-                : (i % 2 == 0
-                    ? new Color(0.115f, 0.105f, 0.095f, 0.9f)
-                    : new Color(0.095f, 0.088f, 0.08f, 0.9f));
+                ? Color.Lerp(panel2, gold, 0.28f)
+                : (i % 2 == 0 ? panel2 : panel);
             row.accent.color = isSelected
-                ? new Color(0.90f, 0.78f, 0.45f, 1f)
-                : new Color(0.30f, 0.25f, 0.20f, 0.9f);
-            row.nameText.color = isSelected
-                ? new Color(0.96f, 0.90f, 0.72f, 1f)
-                : new Color(0.96f, 0.93f, 0.86f, 1f);
+                ? gold
+                : (theme != null ? theme.line : new Color(0.15f, 0.19f, 0.24f, 1f));
+            row.nameText.color = isSelected ? goldHi : parchment;
+            // 选中行的暖金底色会压低对比度，正文提到 parchment/tealHi
+            row.descText.color = isSelected ? parchment : muted;
+            row.infoText.color = isSelected ? tealHi : teal;
+
+            // 已选中时按钮不可点，用暖金色代替灰掉，视觉上表示「当前选择」
+            var buttonColors = row.actionButton.colors;
+            buttonColors.disabledColor = Color.Lerp(panel, gold, 0.38f);
+            row.actionButton.colors = buttonColors;
 
             if (!unlocked)
             {
                 row.statusText.text = "需要 " + cost + " 金币";
-                row.statusText.color = affordable
-                    ? new Color(0.90f, 0.78f, 0.45f, 1f)
-                    : new Color(0.78f, 0.42f, 0.36f, 1f);
+                ApplyFont(row.statusText);
+                row.statusText.color = affordable ? gold : bloodHi;
                 row.actionLabel.text = "UNLOCK";
-                row.actionLabel.color = affordable
-                    ? new Color(0.96f, 0.93f, 0.86f, 1f)
-                    : new Color(0.62f, 0.59f, 0.54f, 0.85f);
+                ApplyFont(row.actionLabel);
+                row.actionLabel.color = affordable ? goldHi : muted;
                 row.actionButton.interactable = true; // 金币不足也允许点击，由提示条反馈原因
             }
             else
             {
                 row.statusText.text = isSelected ? "当前难度" : "已解锁";
-                row.statusText.color = isSelected
-                    ? new Color(0.90f, 0.78f, 0.45f, 1f)
-                    : new Color(0.60f, 0.58f, 0.54f, 0.9f);
+                ApplyFont(row.statusText);
+                row.statusText.color = isSelected ? gold : muted;
                 row.actionLabel.text = isSelected ? "已选择" : "SELECT";
-                row.actionLabel.color = isSelected
-                    ? new Color(0.96f, 0.90f, 0.72f, 1f)
-                    : new Color(0.96f, 0.93f, 0.86f, 1f);
+                ApplyFont(row.actionLabel);
+                row.actionLabel.color = isSelected ? goldHi : parchment;
                 row.actionButton.interactable = !isSelected;
             }
         }
@@ -437,10 +450,19 @@ public class DifficultySelectScreen : MonoBehaviour
     private void ShowMessage(string text, bool success)
     {
         if (messageText == null) return;
+        var theme = UITheme.Current;
         messageText.text = text;
+        ApplyFont(messageText);
         messageText.color = success
-            ? new Color(0.55f, 0.85f, 0.55f, 1f)
-            : new Color(0.90f, 0.45f, 0.40f, 1f);
+            ? (theme != null ? theme.tealHi : new Color(0.56f, 0.75f, 0.72f, 1f))
+            : (theme != null ? theme.bloodHi : new Color(0.79f, 0.32f, 0.34f, 1f));
+    }
+
+    // 文案变化后按内容重选字体：中文 → CJK 子集，英文/数字 → BodyFont
+    private static void ApplyFont(Text text)
+    {
+        var theme = UITheme.Current;
+        if (theme != null) text.font = theme.ResolveFont(text.text, false);
     }
 
     // 已解锁判定统一走契约；数据为空视为未解锁，避免空引用
@@ -478,28 +500,6 @@ public class DifficultySelectScreen : MonoBehaviour
 
     // ---------------- 通用 UI 工具 ----------------
 
-    // 纯色 Image；统一使用运行时生成的 1x1 白色 Sprite
-    private static Image CreateImage(string name, Transform parent, Color color)
-    {
-        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        go.transform.SetParent(parent, false);
-
-        var image = go.GetComponent<Image>();
-        image.sprite = GetWhiteSprite();
-        image.color = color;
-        image.raycastTarget = false;
-        return image;
-    }
-
-    // 铺满父节点
-    private static void Stretch(RectTransform rt)
-    {
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
-    }
-
     // 居中铺在父节点上，size 为宽高；pivot 居中
     private static void SetCentered(RectTransform rt, float width, float height, Vector2 anchoredPos)
     {
@@ -508,89 +508,5 @@ public class DifficultySelectScreen : MonoBehaviour
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.sizeDelta = new Vector2(width, height);
         rt.anchoredPosition = anchoredPos;
-    }
-
-    // 文字样式：与 MetaShopScreen / CharacterSelectScreen 相同（描边 + 投影），居中锚点
-    private static Text CreateText(string name, Transform parent, Font font, int fontSize, Vector2 size,
-        Vector2 anchoredPos, FontStyle style, Color color, TextAnchor alignment)
-    {
-        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
-        go.transform.SetParent(parent, false);
-
-        var rt = go.GetComponent<RectTransform>();
-        SetCentered(rt, size.x, size.y, anchoredPos);
-
-        var text = go.GetComponent<Text>();
-        text.font = font;
-        text.fontSize = fontSize;
-        text.fontStyle = style;
-        text.color = color;
-        text.alignment = alignment;
-        text.horizontalOverflow = HorizontalWrapMode.Overflow;
-        text.verticalOverflow = VerticalWrapMode.Overflow;
-        text.raycastTarget = false;
-
-        var outline = go.AddComponent<Outline>();
-        outline.effectColor = new Color(0f, 0f, 0f, 0.85f);
-        outline.effectDistance = new Vector2(2f, -2f);
-        outline.useGraphicAlpha = false;
-
-        var shadow = go.AddComponent<Shadow>();
-        shadow.effectColor = new Color(0f, 0f, 0f, 0.6f);
-        shadow.effectDistance = new Vector2(0f, -4f);
-        shadow.useGraphicAlpha = false;
-
-        return text;
-    }
-
-    // 字体优先级：内置 LegacyRuntime → 场景中已有 Text 的字体 → 系统中文字体
-    private static Font ResolveFont()
-    {
-        if (cachedFont != null) return cachedFont;
-
-        try
-        {
-            cachedFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        }
-        catch (Exception)
-        {
-            cachedFont = null;
-        }
-
-        if (cachedFont == null)
-        {
-            // 兜底 1：复用场景里现成 Text 的字体，保证一定拿得到字体资源
-            var sceneText = FindFirstObjectByType<Text>(FindObjectsInactive.Include);
-            if (sceneText != null) cachedFont = sceneText.font;
-        }
-
-        if (cachedFont == null)
-        {
-            // 兜底 2：内置字体不可用时，直接取系统中文字体（仅极端情况下执行）
-            string[] candidates = { "PingFang SC", "Heiti SC", "Microsoft YaHei", "Noto Sans CJK SC" };
-            string[] installed = Font.GetOSInstalledFontNames();
-            for (int i = 0; i < candidates.Length; i++)
-            {
-                if (Array.IndexOf(installed, candidates[i]) >= 0)
-                {
-                    cachedFont = Font.CreateDynamicFontFromOSFont(candidates[i], 64);
-                    break;
-                }
-            }
-        }
-
-        return cachedFont;
-    }
-
-    // 运行时生成 1x1 白色 Sprite 并缓存
-    private static Sprite GetWhiteSprite()
-    {
-        if (cachedWhiteSprite != null) return cachedWhiteSprite;
-
-        var tex = Texture2D.whiteTexture;
-        cachedWhiteSprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height),
-            new Vector2(0.5f, 0.5f), 100f);
-        cachedWhiteSprite.name = "DifficultySelectWhite";
-        return cachedWhiteSprite;
     }
 }
