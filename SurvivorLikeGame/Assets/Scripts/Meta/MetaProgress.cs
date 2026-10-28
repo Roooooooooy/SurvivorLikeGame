@@ -152,4 +152,19 @@ public static class MetaProgress
         PlayerPrefs.SetInt(VersionKey, CurrentVersion);
         PlayerPrefs.Save();
     }
+
+    // 解锁购买：扣金币；余额不足返回 false 且不产生副作用。
+    // 解锁键约定：character_<id> / difficulty_<id> / weapon_<id>
+    public static bool TrySpendCoins(int amount)
+    {
+        if (amount <= 0) return true;
+        if (!loaded) Load();
+        if (totalCoins < amount) return false;
+
+        totalCoins -= amount;
+        PlayerPrefs.SetInt(TotalCoinsKey, totalCoins);
+        PlayerPrefs.SetInt(VersionKey, CurrentVersion);
+        PlayerPrefs.Save();
+        return true;
+    }
 }

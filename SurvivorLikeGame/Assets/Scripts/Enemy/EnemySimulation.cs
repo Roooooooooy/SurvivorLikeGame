@@ -72,6 +72,8 @@ public partial class EnemySimulation : MonoBehaviour
 
     EnemyTypeTable table;
     System.Collections.Generic.List<EnemyTypeData> types;
+    int[] baseMaxHealth; // 未叠加难度血量的原始生命值，仅用于金币掉落档次判定
+    float difficultyCoinMultiplier = 1f; // 金币倍率，Awake 时读取一次
 
     NativeList<EnemyData> enemies;
     NativeParallelMultiHashMap<int2, int> grid;
@@ -122,11 +124,29 @@ public partial class EnemySimulation : MonoBehaviour
             Debug.LogError("EnemySimulation: Resources/EnemyTypes.asset 不存在");
             return;
         }
-        types = table.types;
-        if (types.Count == 0)
+        var sourceTypes = table.types;
+        if (sourceTypes.Count == 0)
         {
             Debug.LogError("EnemySimulation: EnemyTypes 资产中没有敌人类型");
             return;
+        }
+
+        // 读取当前难度，并在构建类型副本时一次性应用倍率：
+        // 血量、接触/爆炸伤害、远程与 Boss 弹幕伤害都只在这里缩放一次，
+        // 运行期（Spawn / ProcessContacts / DropCoins）只读结果，不再逐帧相乘。
+        var difficulty = DifficultySelection.Selected;
+        float healthMul = difficulty != null ? difficulty.enemyHealthMultiplier : 1f;
+        float damageMul = difficulty != null ? difficulty.enemyDamageMultiplier : 1f;
+        float speedMul = difficulty != null ? difficulty.enemySpeedMultiplier : 1f;
+        difficultyCoinMultiplier = difficulty != null ? difficulty.coinMultiplier : 1f;
+
+        types = new System.Collections.Generic.List<EnemyTypeData>(sourceTypes.Count);
+        baseMaxHealth = new int[sourceTypes.Count];
+        for (int i = 0; i < sourceTypes.Count; i++)
+        {
+            var src = sourceTypes[i];
+            baseMaxHealth[i] = src.maxHealth; // 金币档次仍按原始血量判定，不受难度影响
+            types.Add(ScaleType(src, healthMul, damageMul, speedMul));
         }
 
         enemies = new NativeList<EnemyData>(1024, Allocator.Persistent);
@@ -156,7 +176,7 @@ public partial class EnemySimulation : MonoBehaviour
         for (int i = 0; i < n; i++)
         {
             var t = types[i];
-            typeSpeed[i] = t.moveSpeed;
+            typeSpeed[i] = t.moveSpeed; // 已含难度移速倍率（下限 0.1 在 ScaleType 中应用）
             typeScale[i] = t.scale;
             typeTriggerRange[i] = t.explodeTriggerRange;
             typeFuseTime[i] = t.fuseTime;
@@ -164,7 +184,7 @@ public partial class EnemySimulation : MonoBehaviour
             typeAttackRange[i] = Mathf.Max(0.1f, t.attackRange);
             typeFireInterval[i] = Mathf.Max(0.1f, t.fireInterval); // 防止 0 间隔导致每帧请求
             typeProjectileSpeed[i] = t.projectileSpeed;
-            typeProjectileDamage[i] = t.projectileDamage;
+            typeProjectileDamage[i] = t.projectileDamage; // 已含难度伤害倍率且至少 1
             // Boss 参数做下限保护：0 间隔会导致每帧请求，0 阶段数会让 UI 阶段失效
             typeBossPhaseCount[i] = Mathf.Max(1, t.bossPhaseCount);
             typeBossPhase2Pct[i] = t.bossPhase2Pct;
@@ -175,7 +195,7 @@ public partial class EnemySimulation : MonoBehaviour
             typeBossBarrageInterval[i] = Mathf.Max(0.1f, t.bossBarrageInterval);
             typeBossBarrageCount[i] = Mathf.Max(1, t.bossBarrageCount);
             typeBossBarrageSpeed[i] = Mathf.Max(0.1f, t.bossBarrageSpeed);
-            typeBossBarrageDamage[i] = Mathf.Max(1, t.bossBarrageDamage);
+            typeBossBarrageDamage[i] = Mathf.Max(1, t.bossBarrageDamage); // BossCombat 直接读类型数据，倍率同样已应用
             maxEnemyRadius = Mathf.Max(maxEnemyRadius, 0.5f * t.scale);
         }
 
@@ -246,11 +266,13 @@ public partial class EnemySimulation : MonoBehaviour
 
         var type = types[typeIndex];
         bool isBoss = type.behavior == EnemyBehavior.Boss;
+        // 类型副本的血量已含难度倍率，这里只读一次，刷怪路径不重复相乘
+        int spawnHealth = Mathf.Max(1, type.maxHealth);
 
         enemies.Add(new EnemyData
         {
             position = pos,
-            health = types[typeIndex].maxHealth,
+            health = spawnHealth,
             typeIndex = typeIndex,
             flashTimer = 0f,
             fuseTimer = -1f,
@@ -274,8 +296,8 @@ public partial class EnemySimulation : MonoBehaviour
         if (isBoss)
         {
             bossAliveCount++;
-            // 同步 Boss 状态总线，供血条 UI / 奖励系统读取
-            BossStatus.Spawn(type.typeName, type.maxHealth, Mathf.Max(1, type.bossPhaseCount));
+            // 同步 Boss 状态总线，供血条 UI / 奖励系统读取；血量用缩放后的值
+            BossStatus.Spawn(type.typeName, spawnHealth, Mathf.Max(1, type.bossPhaseCount));
         }
     }
 
@@ -405,13 +427,14 @@ public partial class EnemySimulation : MonoBehaviour
 
                 var t = types[e.typeIndex];
                 if (t.behavior == EnemyBehavior.Exploder) continue; // 自爆怪伤害走爆炸
-                player.TakeDamage(t.damage);
+                player.TakeDamage(t.damage); // 类型副本已含难度伤害倍率
             }
         }
     }
 
     // 金币掉落：按敌人档次决定数量/面值。生成位置沿用对象池，与经验宝石同一套回收路径。
-    void DropCoins(Vector2 pos, EnemyTypeData t)
+    // 档次用原始血量（不含难度血量倍率）判定，面值再统一乘难度金币倍率。
+    void DropCoins(Vector2 pos, EnemyTypeData t, int typeIndex)
     {
         var prefab = table.coinPrefab;
         if (prefab == null) return;
@@ -423,7 +446,7 @@ public partial class EnemySimulation : MonoBehaviour
             count = UnityEngine.Random.Range(6, 9); // Boss 必掉多枚
             value = 3;
         }
-        else if (t.maxHealth >= EliteCoinHealthThreshold)
+        else if (BaseMaxHealth(typeIndex) >= EliteCoinHealthThreshold)
         {
             if (UnityEngine.Random.value > EliteCoinDropChance) return;
             count = UnityEngine.Random.Range(2, 5);
@@ -435,6 +458,9 @@ public partial class EnemySimulation : MonoBehaviour
             count = 1;
             value = 1;
         }
+
+        // 金币倍率只在掉落时应用一次；至少 1，避免倍率过低时掉落 0 面值金币
+        value = ScaleInt(value, difficultyCoinMultiplier);
 
         for (int i = 0; i < count; i++)
         {
@@ -448,6 +474,55 @@ public partial class EnemySimulation : MonoBehaviour
             var coin = coinObj.GetComponent<CoinPickup>();
             if (coin != null) coin.value = value;
         }
+    }
+
+    // 原始（未叠加难度血量）的最大生命值，用于金币档次判定
+    int BaseMaxHealth(int typeIndex)
+        => baseMaxHealth != null && (uint)typeIndex < (uint)baseMaxHealth.Length
+            ? baseMaxHealth[typeIndex]
+            : types[typeIndex].maxHealth;
+
+    // 整型倍率统一走这里：四舍五入（避免 Mathf.RoundToInt 的银行家舍入），且至少为 1。
+    static int ScaleInt(int baseValue, float multiplier)
+        => Mathf.Max(1, Mathf.FloorToInt(baseValue * multiplier + 0.5f));
+
+    // 生成应用了难度倍率的类型副本，不改动 Resources/EnemyTypes 资产本身。
+    // BossCombat 等外部逻辑直接读 t.maxHealth / t.bossBarrageDamage，
+    // 所以血量与伤害必须在副本上就完成缩放，而不是只写在 NativeArray 副本里。
+    static EnemyTypeData ScaleType(EnemyTypeData src, float healthMul, float damageMul, float speedMul)
+    {
+        return new EnemyTypeData
+        {
+            typeName = src.typeName,
+            sprite = src.sprite,
+            color = src.color,
+            scale = src.scale,
+            moveSpeed = Mathf.Max(0.1f, src.moveSpeed * speedMul),
+            maxHealth = ScaleInt(src.maxHealth, healthMul),
+            damage = ScaleInt(src.damage, damageMul),
+            expValue = src.expValue,
+            behavior = src.behavior,
+            explodeTriggerRange = src.explodeTriggerRange,
+            explodeRadius = src.explodeRadius,
+            fuseTime = src.fuseTime,
+            attackRange = src.attackRange,
+            fireInterval = src.fireInterval,
+            projectileSpeed = src.projectileSpeed,
+            projectileDamage = ScaleInt(src.projectileDamage, damageMul),
+            bossPhaseCount = src.bossPhaseCount,
+            bossPhase2Pct = src.bossPhase2Pct,
+            bossPhase3Pct = src.bossPhase3Pct,
+            bossChargeInterval = src.bossChargeInterval,
+            bossChargeDuration = src.bossChargeDuration,
+            bossChargeSpeedMultiplier = src.bossChargeSpeedMultiplier,
+            bossBarrageInterval = src.bossBarrageInterval,
+            bossBarrageCount = src.bossBarrageCount,
+            bossBarrageSpeed = src.bossBarrageSpeed,
+            bossBarrageDamage = ScaleInt(src.bossBarrageDamage, damageMul),
+            animFrames = src.animFrames,
+            animFps = src.animFps,
+            hasDeathAnim = src.hasDeathAnim,
+        };
     }
 
     // 死亡两阶段处理：
@@ -473,7 +548,7 @@ public partial class EnemySimulation : MonoBehaviour
                 if ((e.flags & FLAG_EXPLODE_PENDING) != 0 && player != null)
                 {
                     if (Vector2.Distance((Vector2)e.position, player.transform.position) <= t.explodeRadius)
-                        player.TakeDamage(t.damage);
+                        player.TakeDamage(t.damage); // 类型副本已含难度伤害倍率
                 }
 
                 if (table.expGemPrefab != null)
@@ -484,7 +559,7 @@ public partial class EnemySimulation : MonoBehaviour
                     if (gem != null) gem.expAmount = t.expValue;
                 }
 
-                DropCoins((Vector2)e.position, t);
+                DropCoins((Vector2)e.position, t, e.typeIndex);
 
                 // 击杀事件交给表现层（音效等）；与宝石掉落一样每只敌人只结算一次
                 CombatEvents.RaiseKill((Vector2)e.position, t.expValue);

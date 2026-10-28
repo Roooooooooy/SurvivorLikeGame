@@ -10,6 +10,10 @@ public class CharacterData : ScriptableObject
     [TextArea] public string description;
     [TextArea] public string passiveDescription;
 
+    [Header("解锁")]
+    public bool unlockedByDefault = true;
+    public int unlockCost = 0;           // 非默认角色的金币解锁价格
+
     [Header("初始武器")]
     public WeaponTarget initialWeapon = WeaponTarget.Orb;
 

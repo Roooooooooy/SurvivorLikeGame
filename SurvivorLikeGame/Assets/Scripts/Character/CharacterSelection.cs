@@ -8,6 +8,9 @@ public static class CharacterSelection
     // 选择结果的持久化键；与 UI 高亮共用同一个键
     const string PrefsKey = "survivor.character.selected";
 
+    // 角色解锁键前缀：完整键为 "character_<id>"，与 MetaProgress 的解锁契约一致
+    const string UnlockKeyPrefix = "character_";
+
     static CharacterData[] cache;
 
     // 全部可选角色（来自 Resources/Characters），按 id 排序保证首项稳定
@@ -24,7 +27,20 @@ public static class CharacterSelection
         }
     }
 
-    // 当前选中的角色；未选择或存档 id 已失效时返回第一个角色（或 null）
+    // 角色是否已解锁：默认角色直接可选，其余需要 MetaProgress 中对应解锁键
+    public static bool IsUnlocked(CharacterData data)
+    {
+        if (data == null || string.IsNullOrEmpty(data.id)) return false;
+        if (data.unlockedByDefault) return true;
+        return MetaProgress.IsUnlocked(UnlockKey(data.id));
+    }
+
+    // 角色解锁键："character_<id>"；空 id 返回空串，交由 MetaProgress 侧忽略
+    public static string UnlockKey(string id)
+        => string.IsNullOrEmpty(id) ? "" : UnlockKeyPrefix + id;
+
+    // 当前选中的角色；未选择、存档 id 已失效或对应角色仍锁定时，
+    // 回退到第一个已解锁角色（全部锁定时返回 null）。
     public static CharacterData Selected
     {
         get
@@ -33,10 +49,16 @@ public static class CharacterSelection
             if (all.Length == 0) return null;
 
             string saved = PlayerPrefs.GetString(PrefsKey, "");
+            CharacterData fallback = null;
             foreach (var c in all)
-                if (c != null && c.id == saved) return c;
+            {
+                if (c == null) continue;
+                bool unlocked = IsUnlocked(c);
+                if (fallback == null && unlocked) fallback = c;
+                if (unlocked && c.id == saved) return c;
+            }
 
-            return all[0];
+            return fallback;
         }
     }
 
@@ -50,10 +72,23 @@ public static class CharacterSelection
         }
     }
 
-    // 选择角色并持久化；空 id 忽略，避免误清空选择
+    // 选择角色并持久化；空 id 忽略，避免误清空选择。
+    // 锁定角色（或 id 不存在）拒绝选择：不写存档，保持原选择不变。
     public static void Select(string id)
     {
         if (string.IsNullOrEmpty(id)) return;
+
+        CharacterData target = null;
+        foreach (var c in All)
+        {
+            if (c != null && c.id == id)
+            {
+                target = c;
+                break;
+            }
+        }
+        if (!IsUnlocked(target)) return;
+
         PlayerPrefs.SetString(PrefsKey, id);
         PlayerPrefs.Save();
     }
