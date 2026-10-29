@@ -33,3 +33,8 @@ sysinfo.txt
 # OS generated
 .DS_Store
 Thumbs.db
+
+# 美术生成器的中间产物
+Tools/Art/out/
+__pycache__/
+*.pyc
