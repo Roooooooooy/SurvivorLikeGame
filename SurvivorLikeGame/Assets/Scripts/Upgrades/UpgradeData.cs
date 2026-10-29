@@ -49,6 +49,7 @@ public class UpgradeData : ScriptableObject
     [TextArea] public string description;
     [Range(1, 100)] public int weight = 10; // 抽取权重
     public int maxStack = 5;             // 最多可选次数
+    public Sprite icon;                  // 可选：留空则按 stat/武器自动解析（UpgradeIcons）
     public List<UpgradeEffect> effects = new List<UpgradeEffect>();
 }
 

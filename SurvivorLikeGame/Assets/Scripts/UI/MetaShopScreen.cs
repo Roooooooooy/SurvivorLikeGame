@@ -246,16 +246,20 @@ public class MetaShopScreen : MonoBehaviour
 
         var row = new UpgradeRow { data = data };
 
+        // 左侧属性图标；文字整体右移让出图标位
+        RowIcon.Add(bg.transform, "Icon", RowIcon.ForMetaUpgrade(data),
+            new Vector2(-RowWidth * 0.5f + 46f, 0f));
+
         // 名称 + 描述
         var nameText = UIFactory.CreateText(bg.transform, "Name",
             data != null ? data.displayName : "(未命名)", 26, parchment,
             TextAnchor.MiddleLeft, false, FontStyle.Bold);
-        SetCentered(nameText.rectTransform, 320f, 34f, new Vector2(-270f, 14f));
+        SetCentered(nameText.rectTransform, 264f, 34f, new Vector2(-200f, 14f));
 
         var desc = UIFactory.CreateText(bg.transform, "Desc",
             data != null ? data.description : string.Empty, 15, muted,
             TextAnchor.MiddleLeft, false, FontStyle.Normal);
-        SetCentered(desc.rectTransform, 320f, 30f, new Vector2(-270f, -20f));
+        SetCentered(desc.rectTransform, 264f, 30f, new Vector2(-200f, -20f));
         desc.horizontalOverflow = HorizontalWrapMode.Wrap;
         desc.verticalOverflow = VerticalWrapMode.Truncate;
 

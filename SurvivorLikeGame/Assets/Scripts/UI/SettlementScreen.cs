@@ -152,6 +152,14 @@ public class SettlementScreen : MonoBehaviour
             labelColor, TextAnchor.MiddleLeft, false, FontStyle.Normal);
         SetCentered(labelText.rectTransform, PanelWidth - 140f, 44f, new Vector2(0f, y));
 
+        // 行首图标：放在标签左边缘之外，不改变原有文字排版
+        var icon = RowIcon.ForSettlement(label);
+        if (icon != null)
+        {
+            RowIcon.Add(parent, "Icon_" + label, icon,
+                new Vector2(-(PanelWidth * 0.5f - 42f), y), 40f);
+        }
+
         // 数值是纯数字/时间，走 BodyFont（VT323）
         var value = UIFactory.CreateText(parent, "Value_" + label, string.Empty, 34,
             valueColor, TextAnchor.MiddleRight, false, FontStyle.Bold);

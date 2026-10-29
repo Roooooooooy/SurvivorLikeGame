@@ -6,12 +6,20 @@ using UnityEngine;
 
 public partial class EnemySimulation
 {
+    // 障碍物在 Job 中的圆形近似（世界坐标 + 半径）
+    public struct ObstacleCircle
+    {
+        public float2 center;
+        public float radius;
+    }
+
     // 移动 + 远程走位/开火请求 + 自爆引线 + 朝向：全部并行，5000 只也是亚毫秒级
     [BurstCompile]
     struct MoveJob : IJobParallelFor
     {
         public NativeArray<EnemyData> enemies;
         [ReadOnly] public NativeArray<float> typeSpeed;
+        [ReadOnly] public NativeArray<float> typeScale;
         [ReadOnly] public NativeArray<int> typeBehavior;
         [ReadOnly] public NativeArray<float> typeTriggerRange;
         [ReadOnly] public NativeArray<float> typeFuseTime;
@@ -21,6 +29,8 @@ public partial class EnemySimulation
         [ReadOnly] public NativeArray<float> typeBossChargeDuration;
         [ReadOnly] public NativeArray<float> typeBossChargeSpeedMultiplier;
         [ReadOnly] public NativeArray<float> typeBossBarrageInterval;
+        [ReadOnly] public NativeArray<ObstacleCircle> obstacles;
+        public int obstacleCount;
         public float2 playerPos;
         public float deltaTime;
 
@@ -123,6 +133,29 @@ public partial class EnemySimulation
                     e.flags = (byte)(dir.x < 0f ? e.flags | FLAG_FLIPX : e.flags & ~FLAG_FLIPX);
             }
 
+            // 障碍物：圆形硬排斥 + 切向偏置，避免正对障碍时卡死
+            if (obstacleCount > 0)
+            {
+                float bodyRadius = 0.32f * math.max(0.6f, typeScale[e.typeIndex]);
+                for (int o = 0; o < obstacleCount; o++)
+                {
+                    ObstacleCircle ob = obstacles[o];
+                    float2 d = e.position - ob.center;
+                    float minDist = ob.radius + bodyRadius;
+                    float dsq = math.lengthsq(d);
+                    if (dsq >= minDist * minDist) continue;
+
+                    float dist2 = math.sqrt(dsq);
+                    float2 n = dist2 > 1e-4f ? d / dist2 : new float2(1f, 0f);
+                    e.position = ob.center + n * minDist;
+
+                    // 每个敌人固定偏向一侧，正对障碍时会自然滑开而不是原地抖动
+                    float side = (i & 1) == 0 ? 1f : -1f;
+                    float2 tangent = new float2(-n.y, n.x);
+                    e.position += tangent * side * speed * deltaTime * 0.4f;
+                }
+            }
+
             if (e.flashTimer > 0f) e.flashTimer -= deltaTime;
 
             if (behavior == BEHAVIOR_EXPLODER) // Exploder
@@ -189,6 +222,7 @@ public partial class EnemySimulation
         {
             enemies = enemyArray,
             typeSpeed = typeSpeed,
+            typeScale = typeScale,
             typeBehavior = typeBehavior,
             typeTriggerRange = typeTriggerRange,
             typeFuseTime = typeFuseTime,
@@ -198,6 +232,8 @@ public partial class EnemySimulation
             typeBossChargeDuration = typeBossChargeDuration,
             typeBossChargeSpeedMultiplier = typeBossChargeSpeedMultiplier,
             typeBossBarrageInterval = typeBossBarrageInterval,
+            obstacles = obstacleData,
+            obstacleCount = obstacleCount,
             playerPos = playerPosBuf[0],
             deltaTime = deltaTime,
         };

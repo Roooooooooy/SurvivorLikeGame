@@ -35,6 +35,14 @@ public class EnemyProjectile : MonoBehaviour
 
         transform.position += (Vector3)(velocity * dt);
 
+        // 障碍物阻挡：撞到石柱/石堆即消失，不会穿过去打到玩家
+        var field = ObstacleField.Instance;
+        if (field != null && field.OverlapsCircle(transform.position, hitRadius))
+        {
+            SmallObjectPool.Release(gameObject);
+            return;
+        }
+
         // 命中判定：与玩家中心的距离，命中后回收（护甲/无敌帧在 TakeDamage 内处理）
         var player = PlayerController.Instance;
         if (player == null) return;
