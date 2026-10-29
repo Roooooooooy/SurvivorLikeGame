@@ -265,19 +265,23 @@ public class CharacterSelectScreen : MonoBehaviour
             theme != null ? theme.line : new Color(0.15f, 0.19f, 0.24f, 1f), false, false);
         SetCentered(row.accent.rectTransform, 6f, height, new Vector2(-RowWidth * 0.5f + 3f, 0f));
 
+        // 左侧图标：以初始武器作为角色标识
+        RowIcon.Add(bg.transform, "Icon", RowIcon.ForCharacter(data),
+            new Vector2(-RowWidth * 0.5f + 52f, 0f), 64f);
+
         // 名字（左上）
         row.nameText = UIFactory.CreateText(bg.transform, "Name",
             data != null
                 ? (!string.IsNullOrEmpty(data.displayName) ? data.displayName
                     : (!string.IsNullOrEmpty(data.id) ? data.id : "未命名角色"))
                 : "(未命名)", 30, parchment, TextAnchor.MiddleLeft, false, FontStyle.Bold);
-        SetCentered(row.nameText.rectTransform, 420f, 40f, new Vector2(-250f, height * 0.5f - 38f));
+        SetCentered(row.nameText.rectTransform, 360f, 40f, new Vector2(-190f, height * 0.5f - 38f));
 
         // 描述（中左）：最多两行，超出截断
         row.descText = UIFactory.CreateText(bg.transform, "Desc",
             data != null && !string.IsNullOrEmpty(data.description) ? data.description : "—",
             16, muted, TextAnchor.MiddleLeft, false, FontStyle.Normal);
-        SetCentered(row.descText.rectTransform, 440f, 48f, new Vector2(-250f, 4f));
+        SetCentered(row.descText.rectTransform, 380f, 48f, new Vector2(-190f, 4f));
         row.descText.horizontalOverflow = HorizontalWrapMode.Wrap;
         row.descText.verticalOverflow = VerticalWrapMode.Truncate;
 
@@ -286,7 +290,7 @@ public class CharacterSelectScreen : MonoBehaviour
             "被动  " + (data != null && !string.IsNullOrEmpty(data.passiveDescription)
                 ? data.passiveDescription : "—"),
             16, teal, TextAnchor.MiddleLeft, false, FontStyle.Normal);
-        SetCentered(row.passiveText.rectTransform, 440f, 36f, new Vector2(-250f, -42f));
+        SetCentered(row.passiveText.rectTransform, 380f, 36f, new Vector2(-190f, -42f));
         row.passiveText.horizontalOverflow = HorizontalWrapMode.Wrap;
         row.passiveText.verticalOverflow = VerticalWrapMode.Truncate;
 

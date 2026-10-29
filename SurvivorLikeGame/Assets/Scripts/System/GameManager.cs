@@ -284,6 +284,7 @@ public class GameManager : MonoBehaviour
                 upgradeButtons[i].gameObject.SetActive(true);
                 var label = ButtonLabel(i);
                 if (label != null) label.text = options[i].displayName;
+                UpgradeIconView.Apply(upgradeButtons[i], UpgradeIcons.ForOption(options[i]));
             }
             else
             {

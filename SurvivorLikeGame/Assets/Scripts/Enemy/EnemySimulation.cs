@@ -79,6 +79,12 @@ public partial class EnemySimulation : MonoBehaviour
     NativeParallelMultiHashMap<int2, int> grid;
     NativeArray<float2> playerPosBuf;
 
+    // 障碍物圆形数据：由 ObstacleField 在主线程更新，Job 只读
+    const int MaxObstacles = 96;
+    NativeArray<ObstacleCircle> obstacleData;
+    int obstacleCount;
+    int lastObstacleVersion = -1;
+
     // 类型数据的 job 副本
     NativeArray<float> typeSpeed;
     NativeArray<float> typeScale;
@@ -113,6 +119,20 @@ public partial class EnemySimulation : MonoBehaviour
 
     public int AliveCount => initialized ? enemies.Length : 0;
     public int TypeCount => types != null ? types.Count : 0;
+
+    // 只读查询：用于调试/验证障碍绕行是否生效
+    public bool HasEnemyInCircle(Vector2 center, float radius)
+    {
+        if (!initialized) return false;
+        float2 c = center;
+        float r2 = radius * radius;
+        for (int i = 0; i < enemies.Length; i++)
+        {
+            var e = enemies[i];
+            if (e.alive != 0 && math.distancesq(e.position, c) <= r2) return true;
+        }
+        return false;
+    }
 
     void Awake()
     {
@@ -152,6 +172,7 @@ public partial class EnemySimulation : MonoBehaviour
         enemies = new NativeList<EnemyData>(1024, Allocator.Persistent);
         grid = new NativeParallelMultiHashMap<int2, int>(2048, Allocator.Persistent);
         playerPosBuf = new NativeArray<float2>(1, Allocator.Persistent);
+        obstacleData = new NativeArray<ObstacleCircle>(MaxObstacles, Allocator.Persistent);
 
         int n = types.Count;
         typeSpeed = new NativeArray<float>(n, Allocator.Persistent);
@@ -209,6 +230,7 @@ public partial class EnemySimulation : MonoBehaviour
         enemies.Dispose();
         grid.Dispose();
         playerPosBuf.Dispose();
+        obstacleData.Dispose();
         typeSpeed.Dispose();
         typeScale.Dispose();
         typeTriggerRange.Dispose();
@@ -247,6 +269,7 @@ public partial class EnemySimulation : MonoBehaviour
         // 顺序保证一致性地：先回收上一帧的死敌（压缩数组），再移动，再重建网格。
         // 武器 Update 无论何时运行，拿到的网格和数组都是同一时刻的快照。
         ProcessDeaths();
+        SyncObstacles();
         RunSimJobs(Time.deltaTime);
         ProcessRangedFire(player);
         ProcessBoss();
@@ -254,6 +277,32 @@ public partial class EnemySimulation : MonoBehaviour
         // 玩家已死则不再结算接触伤害
         if (GameManager.Instance == null || !GameManager.Instance.isGameOver)
             ProcessContacts(player);
+    }
+
+    // 障碍集变化时才拷贝；ObstacleField 每次增删会递增 Version
+    void SyncObstacles()
+    {
+        var field = ObstacleField.Instance;
+        if (field == null)
+        {
+            obstacleCount = 0;
+            return;
+        }
+        if (field.Version == lastObstacleVersion) return;
+
+        lastObstacleVersion = field.Version;
+        var list = field.Circles;
+        int n = math.min(list.Count, MaxObstacles);
+        for (int i = 0; i < n; i++)
+        {
+            var c = list[i];
+            obstacleData[i] = new ObstacleCircle
+            {
+                center = new float2(c.center.x, c.center.y),
+                radius = c.radius,
+            };
+        }
+        obstacleCount = n;
     }
 
     // ---------- 对外 API ----------
@@ -434,6 +483,24 @@ public partial class EnemySimulation : MonoBehaviour
 
     // 金币掉落：按敌人档次决定数量/面值。生成位置沿用对象池，与经验宝石同一套回收路径。
     // 档次用原始血量（不含难度血量倍率）判定，面值再统一乘难度金币倍率。
+    // 障碍物破坏时的金币掉落（数量/面值由 Obstacle 决定）
+    public void SpawnCoins(Vector2 pos, int count, int value)
+    {
+        if (table == null || table.coinPrefab == null || count <= 0) return;
+        value = ScaleInt(value, difficultyCoinMultiplier);
+        for (int i = 0; i < count; i++)
+        {
+            float angle = count > 1 ? i * Mathf.PI * 2f / count : 0f;
+            Vector3 offset = count > 1
+                ? new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * 0.3f
+                : Vector3.zero;
+            var coinObj = SmallObjectPool.Spawn(table.coinPrefab, (Vector3)pos + offset, Quaternion.identity);
+            if (coinObj == null) continue;
+            var coin = coinObj.GetComponent<CoinPickup>();
+            if (coin != null) coin.value = value;
+        }
+    }
+
     void DropCoins(Vector2 pos, EnemyTypeData t, int typeIndex)
     {
         var prefab = table.coinPrefab;

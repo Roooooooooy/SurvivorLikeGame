@@ -260,6 +260,10 @@ public class DifficultySelectScreen : MonoBehaviour
 
         var row = new DifficultyRow { data = data, background = bg };
 
+        // 左侧难度图标
+        RowIcon.Add(bg.transform, "Icon", RowIcon.ForDifficulty(data),
+            new Vector2(-RowWidth * 0.5f + 52f, 0f), 56f);
+
         // 左侧竖条：选中时变亮金色，作为高亮的第二条视觉线索
         row.accent = UIFactory.CreateImage(bg.transform, "Accent", null,
             theme != null ? theme.line : new Color(0.15f, 0.19f, 0.24f, 1f), false, false);
@@ -268,21 +272,21 @@ public class DifficultySelectScreen : MonoBehaviour
         // 名字（左上）
         row.nameText = UIFactory.CreateText(bg.transform, "Name", DisplayName(data), 28,
             parchment, TextAnchor.MiddleLeft, false, FontStyle.Bold);
-        SetCentered(row.nameText.rectTransform, 460f, 38f, new Vector2(-210f, height * 0.5f - 30f));
+        SetCentered(row.nameText.rectTransform, 380f, 38f, new Vector2(-160f, height * 0.5f - 30f));
 
         // 描述（中左）：最多两行，超出截断
         row.descText = UIFactory.CreateText(bg.transform, "Desc",
             data != null && !string.IsNullOrEmpty(data.description) ? data.description : "—",
             15, muted, TextAnchor.MiddleLeft, false, FontStyle.Normal);
-        SetCentered(row.descText.rectTransform, 470f, 40f, new Vector2(-210f, 6f));
+        SetCentered(row.descText.rectTransform, 400f, 40f, new Vector2(-160f, 6f));
         row.descText.horizontalOverflow = HorizontalWrapMode.Wrap;
         row.descText.verticalOverflow = VerticalWrapMode.Truncate;
 
         // 倍率（左下）：敌人 HP / 伤害 / 速度 / 金币，单行展示；语义色 teal
         row.infoText = UIFactory.CreateText(bg.transform, "Multipliers", MultiplierLine(data),
             15, teal, TextAnchor.MiddleLeft, false, FontStyle.Normal);
-        SetCentered(row.infoText.rectTransform, 520f, 32f,
-            new Vector2(-210f, -height * 0.5f + 22f));
+        SetCentered(row.infoText.rectTransform, 440f, 32f,
+            new Vector2(-160f, -height * 0.5f + 22f));
 
         // 状态（右上）：未解锁显示价格，已解锁显示当前状态
         row.statusText = UIFactory.CreateText(bg.transform, "Status", string.Empty, 18,

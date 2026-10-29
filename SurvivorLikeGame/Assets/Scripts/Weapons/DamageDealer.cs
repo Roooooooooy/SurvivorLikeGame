@@ -34,9 +34,23 @@ public class DamageDealer : MonoBehaviour
         // 暴击标记随伤害一起带给表现层（伤害数字/顿帧/震屏），不改变伤害数值与概率
         bool crit = false;
         int dmg = sourceStats != null ? sourceStats.RollDamage(damage, out crit) : damage;
+
+        // 先结算障碍物：投掷物被挡住后不再穿透伤害后面的敌人
+        var field = ObstacleField.Instance;
+        int obstacleHits = field != null
+            ? field.DamageInCircle(transform.position, radius, dmg, isContinuous)
+            : 0;
+
+        if (obstacleHits > 0 && destroyOnHit && !isContinuous)
+        {
+            CombatEvents.RaiseHit(transform.position, dmg, crit);
+            SmallObjectPool.Release(gameObject);
+            return;
+        }
+
         int hits = sim.DamageInCircle(transform.position, radius, dmg, isContinuous);
 
-        if (hits > 0)
+        if (hits > 0 || obstacleHits > 0)
         {
             // 命中事件交给表现层（音效/伤害数字/震屏）订阅
             CombatEvents.RaiseHit(transform.position, dmg, crit);
