@@ -276,6 +276,10 @@ public class GameManager : MonoBehaviour
         if (isGameOver) return;
         Time.timeScale = 0f;
         if (levelUpPanel) levelUpPanel.SetActive(true);
+
+        // 三张卡横向排列（Hades 式），布局只重排一次
+        if (levelUpPanel) LevelUpCards.EnsureLayout(levelUpPanel.transform, options.Count);
+
         if (upgradeButtons == null) return;
         for (int i = 0; i < upgradeButtons.Length; i++)
         {
@@ -284,7 +288,7 @@ public class GameManager : MonoBehaviour
                 upgradeButtons[i].gameObject.SetActive(true);
                 var label = ButtonLabel(i);
                 if (label != null) label.text = options[i].displayName;
-                UpgradeIconView.Apply(upgradeButtons[i], UpgradeIcons.ForOption(options[i]));
+                LevelUpCards.Apply(upgradeButtons[i], options[i], i);
             }
             else
             {

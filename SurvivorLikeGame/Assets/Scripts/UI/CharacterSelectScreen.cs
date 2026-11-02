@@ -266,8 +266,7 @@ public class CharacterSelectScreen : MonoBehaviour
         SetCentered(row.accent.rectTransform, 6f, height, new Vector2(-RowWidth * 0.5f + 3f, 0f));
 
         // 左侧图标：以初始武器作为角色标识
-        RowIcon.Add(bg.transform, "Icon", RowIcon.ForCharacter(data),
-            new Vector2(-RowWidth * 0.5f + 52f, 0f), 64f);
+        CardRow.AddIconChip(bg.transform, RowIcon.ForCharacter(data), -RowWidth * 0.5f + 56f, 72f);
 
         // 名字（左上）
         row.nameText = UIFactory.CreateText(bg.transform, "Name",

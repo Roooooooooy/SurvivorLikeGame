@@ -40,6 +40,8 @@ public static class SceneUISkin
         // 标题
         SkinText(Find(root, "TitleScreen/TitleText"), theme, true, theme.goldHi);
         SkinText(Find(root, "TitleScreen/SubText"), theme, false, theme.muted);
+        AddTitleRules(Find(root, "TitleScreen"), Find(root, "TitleScreen/TitleText") as RectTransform,
+            86f, 560f, theme);
 
         // HUD 文字
         SkinText(Find(root, "HUD/bg/HpText"), theme, false, theme.parchment);
@@ -59,13 +61,35 @@ public static class SceneUISkin
         SkinText(Find(upgradePanel, "LevelUpHint"), theme, false, theme.muted);
         SkinUpgradeButtons(upgradePanel, theme);
 
+        // HUD 改版：顶部通栏经验条 + 状态图标（放在换肤之后，避免被覆盖）
+        var canvasComponent = canvas.GetComponent<Canvas>();
+        HudV2.Apply(canvasComponent, theme, hud != null ? hud.GetComponent<HUDController>() : null);
+
+        // 顶部经验条挂在 Canvas 下，不在 HUD 子树里，需要显式交给显隐驱动
+        var driverRef = canvas.GetComponent<SceneHudVisibility>();
+        if (driverRef != null)
+        {
+            var strip = root.Find("__XPStrip");
+            var rule = root.Find("__XPRule");
+            driverRef.extras = new[]
+            {
+                strip != null ? strip.gameObject : null,
+                rule != null ? rule.gameObject : null,
+            };
+        }
+
         // 死亡面板
         var gameOver = Find(root, "txt_gameOver");
-        SkinText(Find(gameOver, "DeathTitle"), theme, true, theme.goldHi);
+        var deathTitle = Find(gameOver, "DeathTitle");
+        // 血色标题（魂系死亡屏），比金色更有情绪
+        SkinText(deathTitle, theme, true, theme.bloodHi);
+        AddTitleRules(gameOver, deathTitle as RectTransform, 62f, 700f, theme);
+
         var restart = Find(gameOver, "RestartButton");
         if (restart != null)
         {
             SkinButton(restart.GetComponent<Button>(), theme);
+            AddButtonBorder(restart, theme);
             // 场景原布局把 Restart 放在屏幕正中，会压住 YOU DIED；下移到标题下方
             var restartRt = restart as RectTransform;
             if (restartRt != null) restartRt.anchoredPosition = new Vector2(0f, -150f);
@@ -75,6 +99,54 @@ public static class SceneUISkin
     static Transform Find(Transform parent, string path)
     {
         return parent != null ? parent.Find(path) : null;
+    }
+
+    // 标题上下各一条细金线，做出 Hades / 魂系的仪式感
+    static void AddTitleRules(Transform parent, RectTransform title, float gap, float width, UITheme theme)
+    {
+        if (parent == null || title == null || theme == null) return;
+        if (parent.Find("__RuleTop") != null) return;
+
+        Vector2 center = title.anchoredPosition;
+        AddRule(parent, "__RuleTop", center + new Vector2(0f, gap), width, theme);
+        AddRule(parent, "__RuleBottom", center + new Vector2(0f, -gap), width, theme);
+    }
+
+    static void AddRule(Transform parent, string name, Vector2 pos, float width, UITheme theme)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(parent, false);
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = new Vector2(width, 2f);
+
+        var image = go.GetComponent<Image>();
+        image.color = theme.WithAlpha(theme.gold, 0.42f);
+        image.raycastTarget = false;
+    }
+
+    // 按钮外圈描边：让 RESTART 这类单按钮有明确的金属收口
+    static void AddButtonBorder(Transform button, UITheme theme)
+    {
+        if (button == null || theme == null || theme.frameSprite == null) return;
+        if (button.Find("__ButtonBorder") != null) return;
+
+        var go = new GameObject("__ButtonBorder", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.transform.SetParent(button, false);
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = new Vector2(-2f, -2f);
+        rt.offsetMax = new Vector2(2f, 2f);
+        rt.SetAsFirstSibling();
+
+        var image = go.GetComponent<Image>();
+        image.sprite = theme.frameSprite;
+        image.type = Image.Type.Sliced;
+        image.color = theme.WithAlpha(theme.gold, 0.5f);
+        image.raycastTarget = false;
     }
 
     // 只换字体和颜色，保留字号、对齐等排版参数。
