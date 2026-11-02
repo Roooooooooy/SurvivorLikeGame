@@ -8,6 +8,9 @@ internal class SceneHudVisibility : MonoBehaviour
     public GameObject timer;
     public GameObject kills;
 
+    // HUD v2 新增的顶部经验条等元素挂在 Canvas 下，需要一并隐藏
+    public GameObject[] extras;
+
     bool? visible;
 
     void Update()
@@ -23,5 +26,11 @@ internal class SceneHudVisibility : MonoBehaviour
         if (hud != null) hud.SetActive(show);
         if (timer != null) timer.SetActive(show);
         if (kills != null) kills.SetActive(show);
+
+        if (extras != null)
+        {
+            for (int i = 0; i < extras.Length; i++)
+                if (extras[i] != null) extras[i].SetActive(show);
+        }
     }
 }

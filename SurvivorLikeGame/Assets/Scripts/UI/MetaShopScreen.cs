@@ -246,9 +246,9 @@ public class MetaShopScreen : MonoBehaviour
 
         var row = new UpgradeRow { data = data };
 
-        // 左侧属性图标；文字整体右移让出图标位
-        RowIcon.Add(bg.transform, "Icon", RowIcon.ForMetaUpgrade(data),
-            new Vector2(-RowWidth * 0.5f + 46f, 0f));
+        // 卡片化装饰：左侧强调条 + 图标底座
+        CardRow.AddAccent(bg.transform, AccentFor(data), RowWidth, Mathf.Max(40f, rowHeight - 8f));
+        CardRow.AddIconChip(bg.transform, RowIcon.ForMetaUpgrade(data), -RowWidth * 0.5f + 48f);
 
         // 名称 + 描述
         var nameText = UIFactory.CreateText(bg.transform, "Name",
@@ -268,10 +268,16 @@ public class MetaShopScreen : MonoBehaviour
             parchment, TextAnchor.MiddleCenter, false, FontStyle.Bold);
         SetCentered(row.levelText.rectTransform, 130f, 40f, new Vector2(-20f, 0f));
 
-        // 下一级价格（含中文，刷新时由 ResolveFont 切到 CJK 子集）
+        // 金币图标 + 下一级价格
+        var coin = UIFactory.CreateImage(bg.transform, "CoinIcon",
+            Resources.Load<Sprite>("Icons/ic_coin"), Color.white, false, false);
+        SetCentered(coin.rectTransform, 24f, 24f, new Vector2(74f, 0f));
+        coin.preserveAspect = true;
+        coin.enabled = coin.sprite != null;
+
         row.priceText = UIFactory.CreateText(bg.transform, "Price", string.Empty, 24,
-            parchment, TextAnchor.MiddleCenter, false, FontStyle.Normal);
-        SetCentered(row.priceText.rectTransform, 130f, 40f, new Vector2(140f, 0f));
+            parchment, TextAnchor.MiddleLeft, false, FontStyle.Normal);
+        SetCentered(row.priceText.rectTransform, 110f, 40f, new Vector2(152f, 0f));
 
         // BUY 按钮
         row.buyButton = CreateBuyButton(bg.transform, new Vector2(350f, 0f), out row.buyLabel);
@@ -279,6 +285,28 @@ public class MetaShopScreen : MonoBehaviour
         row.buyButton.onClick.AddListener(() => OnBuyClicked(captured));
 
         rows.Add(row);
+    }
+
+    // 行强调色：按永久升级影响的主属性取色，和图标语义一致
+    private static Color AccentFor(MetaUpgradeData data)
+    {
+        var theme = UITheme.Current;
+        Color gold = theme != null ? theme.gold : new Color(0.79f, 0.66f, 0.42f, 1f);
+        Color teal = theme != null ? theme.teal : new Color(0.37f, 0.56f, 0.54f, 1f);
+        Color blood = theme != null ? theme.blood : new Color(0.55f, 0.18f, 0.20f, 1f);
+        if (data == null) return gold;
+
+        switch (data.stat)
+        {
+            case MetaStatType.DamagePct:
+            case MetaStatType.CritChanceFlat:
+                return blood;
+            case MetaStatType.MoveSpeedPct:
+            case MetaStatType.PickupRadiusPct:
+                return teal;
+            default:
+                return gold;
+        }
     }
 
     private Button CreateBuyButton(Transform parent, Vector2 anchoredPos, out Text label)

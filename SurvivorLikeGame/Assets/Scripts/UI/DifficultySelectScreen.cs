@@ -261,8 +261,7 @@ public class DifficultySelectScreen : MonoBehaviour
         var row = new DifficultyRow { data = data, background = bg };
 
         // 左侧难度图标
-        RowIcon.Add(bg.transform, "Icon", RowIcon.ForDifficulty(data),
-            new Vector2(-RowWidth * 0.5f + 52f, 0f), 56f);
+        CardRow.AddIconChip(bg.transform, RowIcon.ForDifficulty(data), -RowWidth * 0.5f + 56f, 72f);
 
         // 左侧竖条：选中时变亮金色，作为高亮的第二条视觉线索
         row.accent = UIFactory.CreateImage(bg.transform, "Accent", null,

@@ -127,11 +127,11 @@ public class SettlementScreen : MonoBehaviour
             false, false);
         SetCentered(divider.rectTransform, PanelWidth - 140f, 2f, new Vector2(0f, 168f));
 
-        // 统计行：左侧标签、右侧数值；金币走语义色 gold
-        timeValue = CreateStatRow(panel.transform, "时长", 105f, parchment);
-        killsValue = CreateStatRow(panel.transform, "击杀", 40f, parchment);
-        coinsValue = CreateStatRow(panel.transform, "获得金币", -25f, gold);
-        totalCoinsValue = CreateStatRow(panel.transform, "累计金币", -90f, gold);
+        // 统计块：2x2 卡片，图标 + 标签 + 数值；金币走语义色 gold
+        timeValue = CreateStatTile(panel.transform, "时长", 0, parchment);
+        killsValue = CreateStatTile(panel.transform, "击杀", 1, parchment);
+        coinsValue = CreateStatTile(panel.transform, "获得金币", 2, gold);
+        totalCoinsValue = CreateStatTile(panel.transform, "累计金币", 3, gold);
 
         // 操作提示（语义色 teal）
         var hint = UIFactory.CreateText(panel.transform, "Hint", "按 R 重新开始", 26,
@@ -142,28 +142,51 @@ public class SettlementScreen : MonoBehaviour
         CreateRestartButton(panel.transform, gold, goldHi);
     }
 
-    // 一行统计：返回右侧数值 Text；label 固定在左、value 固定在右
-    private Text CreateStatRow(Transform parent, string label, float y, Color valueColor)
+    // 一个统计块：深色卡片 + 图表图标 + 小标签 + 大数值
+    private Text CreateStatTile(Transform parent, string label, int index, Color valueColor)
     {
         var theme = UITheme.Current;
         Color labelColor = theme != null ? theme.muted : new Color(0.56f, 0.55f, 0.50f, 1f);
+        Color tileColor = theme != null ? theme.panel2 : new Color(0.08f, 0.11f, 0.15f, 1f);
 
-        var labelText = UIFactory.CreateText(parent, "Label_" + label, label, 34,
-            labelColor, TextAnchor.MiddleLeft, false, FontStyle.Normal);
-        SetCentered(labelText.rectTransform, PanelWidth - 140f, 44f, new Vector2(0f, y));
+        const float TileWidth = 268f;
+        const float TileHeight = 96f;
+        int col = index % 2;
+        int row = index / 2;
+        var pos = new Vector2(col == 0 ? -146f : 146f, row == 0 ? 70f : -44f);
 
-        // 行首图标：放在标签左边缘之外，不改变原有文字排版
+        var tile = UIFactory.CreateImage(parent, "Tile_" + label, null, tileColor, false, false);
+        SetCentered(tile.rectTransform, TileWidth, TileHeight, pos);
+        if (theme != null && theme.panelSprite != null)
+        {
+            tile.sprite = theme.panelSprite;
+            tile.type = Image.Type.Sliced;
+        }
+
+        // 左侧强调条
+        var accent = UIFactory.CreateImage(tile.transform, "Accent", null,
+            theme != null ? theme.WithAlpha(theme.gold, 0.55f) : new Color(0.79f, 0.66f, 0.42f, 0.55f),
+            false, false);
+        SetCentered(accent.rectTransform, 3f, TileHeight - 22f, new Vector2(-TileWidth * 0.5f + 5f, 0f));
+
+        // 图标
         var icon = RowIcon.ForSettlement(label);
         if (icon != null)
         {
-            RowIcon.Add(parent, "Icon_" + label, icon,
-                new Vector2(-(PanelWidth * 0.5f - 42f), y), 40f);
+            var iconImage = UIFactory.CreateImage(tile.transform, "Icon", icon, Color.white, false, false);
+            SetCentered(iconImage.rectTransform, 38f, 38f, new Vector2(-TileWidth * 0.5f + 40f, 0f));
+            iconImage.preserveAspect = true;
         }
 
-        // 数值是纯数字/时间，走 BodyFont（VT323）
-        var value = UIFactory.CreateText(parent, "Value_" + label, string.Empty, 34,
-            valueColor, TextAnchor.MiddleRight, false, FontStyle.Bold);
-        SetCentered(value.rectTransform, PanelWidth - 140f, 44f, new Vector2(0f, y));
+        // 标签（小、弱）
+        var labelText = UIFactory.CreateText(tile.transform, "Label", label, 18,
+            labelColor, TextAnchor.MiddleLeft, false, FontStyle.Normal);
+        SetCentered(labelText.rectTransform, 150f, 24f, new Vector2(30f, 20f));
+
+        // 数值（大、强）
+        var value = UIFactory.CreateText(tile.transform, "Value", string.Empty, 40,
+            valueColor, TextAnchor.MiddleLeft, false, FontStyle.Bold);
+        SetCentered(value.rectTransform, 150f, 48f, new Vector2(30f, -16f));
         return value;
     }
 
