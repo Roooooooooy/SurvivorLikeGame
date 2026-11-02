@@ -16,6 +16,7 @@ public partial class EnemySimulation
         public float[] flashes;  // 逐实例受击闪红强度
         public float[] outlines;  // 逐实例描边强度（精英/Boss = 1，其余 0）
         public float[] dissolves; // 逐实例死亡溶解进度（0=不溶解，1=完全溶解）
+        public float[] sortKeys;  // 逐实例排序键（HD-2D：-世界 Z，先画远端）
         public int count;
     }
 
@@ -39,16 +40,69 @@ public partial class EnemySimulation
     float[] chunkOutlines;
     float[] chunkDissolves;
 
+    // ---- HD-2D / URP 路径 ----
+    // hd2d=true 时：逻辑 (x, y) 映射到世界 (x, 0, y)，quad 改为脚底 pivot，
+    // 使用 URP alpha clip shader + 贴地椭圆阴影；否则保持旧的内置管线 2D 行为。
+    bool hd2d;
+    Mesh shadowQuad;
+    Material shadowMaterial;
+    Camera cachedCamera;
+    int[] sortOrder;
+    Matrix4x4[] shadowMats;
+    Matrix4x4[] chunkShadowMats;
+
+    // 供压测/调试读取：本帧敌人实际提交的 draw call 与实例数
+    public int LastEnemyDrawCalls { get; private set; }
+    public int LastShadowDrawCalls { get; private set; }
+    public int LastRenderedInstances { get; private set; }
+
+    [Header("HD-2D")]
+    [Tooltip("开启后逻辑 (x,y) 映射到世界 (x,0,y)，并使用 URP alpha-clip 精灵。默认关闭，避免影响未迁移的 SampleScene。")]
+    public bool hd2dRendering = false;
+
     void InitRenderer()
     {
-        var shader = Shader.Find("Survivor/InstancedSprite");
+        // 只有显式开启 HD-2D 的敌人实例才切到 URP + XZ 映射；
+        // 其他场景（尤其未迁移的 SampleScene）完全保持旧的内置管线 2D 路径。
+        bool urpActive = GraphicsSettings.currentRenderPipeline != null;
+        Shader shader = hd2dRendering && urpActive
+            ? Shader.Find("Survivor/URPInstancedSprite")
+            : null;
+        if (shader == null) shader = Shader.Find("Survivor/InstancedSprite");
         if (shader == null)
         {
-            Debug.LogError("EnemySimulation: 找不到 Survivor/InstancedSprite shader");
+            Debug.LogError("EnemySimulation: 找不到 Survivor/URPInstancedSprite 或 Survivor/InstancedSprite shader");
             return;
         }
 
-        quad = CreateQuad();
+        hd2d = shader.name == "Survivor/URPInstancedSprite";
+        if (hd2dRendering && !hd2d)
+            Debug.LogWarning("EnemySimulation: 已开启 hd2dRendering，但 URP 未启用或找不到 Survivor/URPInstancedSprite，回退到内置管线路径");
+
+        quad = hd2d ? CreateHd2dQuad() : CreateQuad();
+        sortOrder = new int[maxEnemies];
+        if (hd2d)
+        {
+            shadowQuad = CreateGroundQuad();
+            shadowMats = new Matrix4x4[maxEnemies];
+            chunkShadowMats = new Matrix4x4[ChunkSize];
+            cachedCamera = Camera.main;
+
+            var shadowShader = Shader.Find("Survivor/URPInstancedShadow");
+            if (shadowShader != null)
+            {
+                shadowMaterial = new Material(shadowShader) { name = "HD2D_EnemyShadow" };
+                shadowMaterial.SetColor("_Color", new Color(0.02f, 0.015f, 0.025f, 0.55f));
+                shadowMaterial.SetFloat("_Softness", 0.45f);
+                shadowMaterial.enableInstancing = true;
+                // 排在普通 Transparent 之前，避免盖住体积光等后加的透明效果
+                shadowMaterial.renderQueue = 2900;
+            }
+            else
+            {
+                Debug.LogWarning("EnemySimulation: 找不到 Survivor/URPInstancedShadow，跳过贴地阴影");
+            }
+        }
         mpb = new MaterialPropertyBlock();
         chunkMats = new Matrix4x4[ChunkSize];
         chunkCols = new Vector4[ChunkSize];
@@ -102,6 +156,18 @@ public partial class EnemySimulation
                 mat.SetColor("_OutlineColor", new Color(0.78f, 0.58f, 0.16f, 1f));
                 mat.SetFloat("_OutlineWidth", 1.25f);
                 mat.SetColor("_DissolveEdge", new Color(1f, 0.55f, 0.18f, 1f));
+                if (hd2d)
+                {
+                    // URP alpha clip + 假光照参数；_MainTex_TexelSize 手动写入，
+                    // 因为描边采样依赖它，不能指望 SRP 自动填充。
+                    mat.SetFloat("_Cutoff", 0.5f);
+                    mat.SetVector("_MainTex_TexelSize", new Vector4(
+                        1f / sprite.texture.width, 1f / sprite.texture.height,
+                        sprite.texture.width, sprite.texture.height));
+                    mat.SetColor("_FakeLightColor", new Color(1f, 0.94f, 0.86f, 1f));
+                    mat.SetColor("_AmbientColor", new Color(0.42f, 0.46f, 0.55f, 1f));
+                    mat.SetVector("_FakeLightDir", new Vector4(0.35f, 0.7f, 0f, 0f));
+                }
                 batch = new RenderBatch
                 {
                     material = mat,
@@ -112,6 +178,7 @@ public partial class EnemySimulation
                     flashes = new float[maxEnemies],
                     outlines = new float[maxEnemies],
                     dissolves = new float[maxEnemies],
+                    sortKeys = new float[maxEnemies],
                 };
                 batchByTexture[sprite.texture] = batch;
                 batchList.Add(batch);
@@ -127,6 +194,8 @@ public partial class EnemySimulation
             foreach (var b in batches)
                 if (b.material != null) Destroy(b.material);
         if (quad != null) Destroy(quad);
+        if (shadowQuad != null) Destroy(shadowQuad);
+        if (shadowMaterial != null) Destroy(shadowMaterial);
     }
 
     void LateUpdate()
@@ -135,6 +204,11 @@ public partial class EnemySimulation
 
         foreach (var b in batches) b.count = 0;
         float time = Time.time;
+        int shadowCount = 0;
+        LastEnemyDrawCalls = 0;
+        LastShadowDrawCalls = 0;
+        LastRenderedInstances = 0;
+        if (hd2d && cachedCamera == null) cachedCamera = Camera.main;
 
         for (int i = 0; i < enemies.Length; i++)
         {
@@ -202,12 +276,49 @@ public partial class EnemySimulation
                     : 0f;
             }
 
+            // HD-2D 走 alpha clip：形状由 clip 决定，tint alpha 必须保持 1，
+            // 否则无死亡动画的类型会在淡出中途整块被裁掉。溶解仍由 _Dissolve 负责。
+            if (hd2d) c.a = 1f;
+
             int k = batch.count++;
-            // z=1：敌人画在玩家/宝石后面
-            batch.matrices[k] = Matrix4x4.TRS(
-                new Vector3(e.position.x, e.position.y, 1f),
-                Quaternion.identity,
-                new Vector3(size.x * flip, size.y, 1f));
+            if (hd2d)
+            {
+                // 逻辑 (x, y) -> 世界 (x, 0, y)；脚底 pivot 的 quad 直接贴地。
+                Vector3 worldPos = new Vector3(e.position.x, 0f, e.position.y);
+                Quaternion rot = Quaternion.identity;
+                if (cachedCamera != null)
+                {
+                    // 只绕 Y 轴朝向相机（HD-2D billboard），保持脚底始终贴地
+                    Vector3 toCam = cachedCamera.transform.position - worldPos;
+                    toCam.y = 0f;
+                    if (toCam.sqrMagnitude > 1e-6f)
+                        rot = Quaternion.LookRotation(toCam, Vector3.up);
+                }
+
+                batch.matrices[k] = Matrix4x4.TRS(
+                    worldPos, rot,
+                    new Vector3(size.x * flip, size.y, 1f));
+
+                // 世界 Z 越大离相机越远：先画远端，近端后画（配合 depth test 双保险）
+                batch.sortKeys[k] = -e.position.y;
+
+                if (shadowMaterial != null && shadowCount < shadowMats.Length)
+                {
+                    // 贴地椭圆：宽度跟精灵走，纵深压扁；高度抬 2cm 防止和地面 z-fighting
+                    shadowMats[shadowCount++] = Matrix4x4.TRS(
+                        new Vector3(worldPos.x, 0.02f, worldPos.z),
+                        Quaternion.identity,
+                        new Vector3(size.x * 0.46f, 1f, size.y * 0.16f));
+                }
+            }
+            else
+            {
+                // z=1：敌人画在玩家/宝石后面
+                batch.matrices[k] = Matrix4x4.TRS(
+                    new Vector3(e.position.x, e.position.y, 1f),
+                    Quaternion.identity,
+                    new Vector3(size.x * flip, size.y, 1f));
+            }
             batch.colors[k] = c;
             batch.frames[k] = frame;
             batch.rows[k] = row;
@@ -216,26 +327,72 @@ public partial class EnemySimulation
             batch.dissolves[k] = dissolve;
         }
 
+        foreach (var b in batches) LastRenderedInstances += b.count;
+
         foreach (var batch in batches)
         {
-            int drawn = 0;
-            while (drawn < batch.count)
+            int total = batch.count;
+            bool sorted = hd2d && total > 1;
+            if (sorted)
             {
-                int n = Mathf.Min(ChunkSize, batch.count - drawn);
-                System.Array.Copy(batch.matrices, drawn, chunkMats, 0, n);
-                System.Array.Copy(batch.colors, drawn, chunkCols, 0, n);
-                System.Array.Copy(batch.frames, drawn, chunkFrames, 0, n);
-                System.Array.Copy(batch.rows, drawn, chunkRows, 0, n);
-                System.Array.Copy(batch.flashes, drawn, chunkFlashes, 0, n);
-                System.Array.Copy(batch.outlines, drawn, chunkOutlines, 0, n);
-                System.Array.Copy(batch.dissolves, drawn, chunkDissolves, 0, n);
+                // 按世界 Z 从远到近排序。alpha clip + ZWrite 本身已能正确遮挡，
+                // 排序主要保证透明/未来混合模式下的绘制顺序稳定。
+                for (int i = 0; i < total; i++) sortOrder[i] = i;
+                System.Array.Sort(batch.sortKeys, sortOrder, 0, total);
+            }
+
+            int drawn = 0;
+            while (drawn < total)
+            {
+                int n = Mathf.Min(ChunkSize, total - drawn);
+                if (sorted)
+                {
+                    for (int i = 0; i < n; i++)
+                    {
+                        int src = sortOrder[drawn + i];
+                        chunkMats[i] = batch.matrices[src];
+                        chunkCols[i] = batch.colors[src];
+                        chunkFrames[i] = batch.frames[src];
+                        chunkRows[i] = batch.rows[src];
+                        chunkFlashes[i] = batch.flashes[src];
+                        chunkOutlines[i] = batch.outlines[src];
+                        chunkDissolves[i] = batch.dissolves[src];
+                    }
+                }
+                else
+                {
+                    System.Array.Copy(batch.matrices, drawn, chunkMats, 0, n);
+                    System.Array.Copy(batch.colors, drawn, chunkCols, 0, n);
+                    System.Array.Copy(batch.frames, drawn, chunkFrames, 0, n);
+                    System.Array.Copy(batch.rows, drawn, chunkRows, 0, n);
+                    System.Array.Copy(batch.flashes, drawn, chunkFlashes, 0, n);
+                    System.Array.Copy(batch.outlines, drawn, chunkOutlines, 0, n);
+                    System.Array.Copy(batch.dissolves, drawn, chunkDissolves, 0, n);
+                }
                 mpb.SetVectorArray("_Color", chunkCols);
                 mpb.SetFloatArray("_Frame", chunkFrames);
                 mpb.SetFloatArray("_Row", chunkRows);
                 mpb.SetFloatArray("_Flash", chunkFlashes);
                 mpb.SetFloatArray("_Outline", chunkOutlines);
                 mpb.SetFloatArray("_Dissolve", chunkDissolves);
-                Graphics.DrawMeshInstanced(quad, 0, batch.material, chunkMats, n, mpb);
+                // 敌人是纯表现层，不投射/接收实时阴影；光照由 shader 内的假光照完成
+                Graphics.DrawMeshInstanced(quad, 0, batch.material, chunkMats, n, mpb,
+                    ShadowCastingMode.Off, false);
+                LastEnemyDrawCalls++;
+                drawn += n;
+            }
+        }
+
+        if (hd2d && shadowMaterial != null && shadowCount > 0)
+        {
+            int drawn = 0;
+            while (drawn < shadowCount)
+            {
+                int n = Mathf.Min(ChunkSize, shadowCount - drawn);
+                System.Array.Copy(shadowMats, drawn, chunkShadowMats, 0, n);
+                Graphics.DrawMeshInstanced(shadowQuad, 0, shadowMaterial, chunkShadowMats, n,
+                    null, ShadowCastingMode.Off, false);
+                LastShadowDrawCalls++;
                 drawn += n;
             }
         }
@@ -254,6 +411,40 @@ public partial class EnemySimulation
             triangles = new[] { 0, 2, 1, 1, 2, 3 },
         };
         // 实例化绘制没有逐实例剔除，放大包围盒防止整批被误剔除
+        m.bounds = new Bounds(Vector3.zero, Vector3.one * 100000f);
+        return m;
+    }
+
+    // HD-2D 用：pivot 在脚底中心（y=0..1），矩阵平移到 (x, 0, y) 时脚底正好贴地。
+    static Mesh CreateHd2dQuad()
+    {
+        var m = new Mesh
+        {
+            vertices = new[]
+            {
+                new Vector3(-0.5f, 0f), new Vector3(0.5f, 0f),
+                new Vector3(-0.5f, 1f), new Vector3(0.5f, 1f),
+            },
+            uv = new[] { Vector2.zero, Vector2.right, Vector2.up, Vector2.one },
+            triangles = new[] { 0, 2, 1, 1, 2, 3 },
+        };
+        m.bounds = new Bounds(Vector3.zero, Vector3.one * 100000f);
+        return m;
+    }
+
+    // 贴地阴影用：XZ 平面上的单位 quad
+    static Mesh CreateGroundQuad()
+    {
+        var m = new Mesh
+        {
+            vertices = new[]
+            {
+                new Vector3(-0.5f, 0f, -0.5f), new Vector3(0.5f, 0f, -0.5f),
+                new Vector3(-0.5f, 0f, 0.5f), new Vector3(0.5f, 0f, 0.5f),
+            },
+            uv = new[] { Vector2.zero, Vector2.right, Vector2.up, Vector2.one },
+            triangles = new[] { 0, 2, 1, 1, 2, 3 },
+        };
         m.bounds = new Bounds(Vector3.zero, Vector3.one * 100000f);
         return m;
     }
