@@ -10,6 +10,7 @@ public static class HD2DSceneSetup
 {
     const string ScenePath = "Assets/Scenes/HD2D_Proto.unity";
     const string SettingsDir = "Assets/Settings";
+    const string LowPolyDir = "Assets/Meshes/HD2D/";
     const string CatPath = "Assets/Resources/Proto25D/cat_25d.png";
     const string GoblinPath = "Assets/Resources/Proto25D/goblin_25d.png";
     const string PillarPath = "Assets/Resources/Proto25D/pillar_25d.png";
@@ -21,6 +22,8 @@ public static class HD2DSceneSetup
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
         EnsureRepeat("Assets/Textures/Background/bg_stone_floor.png");
+        EnsureRepeat("Assets/Textures/bg_dungeon_floor.png");
+        EnsureRepeat("Assets/Textures/Background/bg_grunge_large.png");
 
         CreateCamera();
         var groundMat = CreateGroundMaterial();
@@ -28,9 +31,10 @@ public static class HD2DSceneSetup
         CreateLights();
         CreateEnvironment();
 
-        var catMat = CreateSpriteMaterial(CatPath, "HD2D_Cat");
-        var goblinMat = CreateSpriteMaterial(GoblinPath, "HD2D_Goblin");
-        var pillarMat = CreateSpriteMaterial(PillarPath, "HD2D_Pillar");
+        var catMat = CreateSpriteMaterial(CatPath, "HD2D_Cat", 0.30f, 1.0f,
+            new Color(0.34f, 0.50f, 0.72f, 1f), new Color(0.82f, 0.85f, 0.90f, 1f));
+        var goblinMat = CreateSpriteMaterial(GoblinPath, "HD2D_Goblin", 0.60f, 0f, Color.clear, Color.white);
+        var pillarMat = CreateSpriteMaterial(PillarPath, "HD2D_Pillar", 0.55f, 0f, Color.clear, Color.white);
 
         var cat = LoadSprite(CatPath);
         var goblin = LoadSprite(GoblinPath);
@@ -139,81 +143,90 @@ public static class HD2DSceneSetup
         sun.shadowNormalBias = 0.3f;
 
         var fireGo = new GameObject("Brazier Light");
-        fireGo.transform.position = new Vector3(4.5f, 1.6f, 2f);
+        fireGo.transform.position = new Vector3(4.5f, 2.1f, 2f);
         var fire = fireGo.AddComponent<Light>();
         fire.type = LightType.Point;
         fire.color = new Color(1f, 0.5f, 0.16f);
         fire.range = 9f;
-        fire.intensity = 4f;
+        fire.intensity = 3f;
         fire.shadows = LightShadows.None;
     }
 
-    // 用内置 primitive 拼一个低多边形地牢场景：台阶、断墙、柱子、火盆、碎石。
-    // 目的是给移轴景深提供前后层次，而不是做完整关卡。
+    // 低模地牢模块由 HD2DLowPolyKit 生成；这里只负责摆位。
+    // 尺寸、倒角、破损都已烘进 Mesh，不再用 Cube/Cylinder 直接缩放。
     static void CreateEnvironment()
     {
+        HD2DLowPolyKit.Build();
+
         // 石头用带纹理的材质：纯色受光后会整片发白，石板纹理能保住细节
-        var stone = CreateStoneMaterial("HD2D_Stone", new Color(0.48f, 0.47f, 0.50f));
-        var darkStone = CreateStoneMaterial("HD2D_DarkStone", new Color(0.33f, 0.32f, 0.36f));
-        var wood = CreateLitMaterial("HD2D_Wood", new Color(0.20f, 0.13f, 0.08f));
+        var stone = CreateStoneMaterial("HD2D_Stone", new Color(0.95f, 0.94f, 1.00f));
+        var darkStone = CreateStoneMaterial("HD2D_DarkStone", new Color(0.72f, 0.71f, 0.78f));
 
         // 远处高台 + 两级台阶（推远，别挡住角色）
-        CreateBox("Dais", new Vector3(0f, 0.4f, 8.5f), new Vector3(9f, 0.8f, 5f), darkStone);
-        CreateBox("Step1", new Vector3(0f, 0.15f, 6.2f), new Vector3(5.5f, 0.3f, 1.2f), stone);
-        CreateBox("Step2", new Vector3(0f, 0.35f, 7.2f), new Vector3(5.5f, 0.7f, 1.2f), stone);
+        CreateMeshObject("Dais", "HD2D_Dais", new Vector3(0f, 0.4f, 8.5f), darkStone);
+        CreateMeshObject("Step1", "HD2D_Step1", new Vector3(0f, 0.15f, 6.2f), stone);
+        CreateMeshObject("Step2", "HD2D_Step2", new Vector3(0f, 0.35f, 7.2f), stone);
 
         // 两侧断墙
-        CreateBox("WallL", new Vector3(-8f, 1.2f, 7.5f), new Vector3(0.8f, 2.4f, 9f), darkStone);
-        CreateBox("WallR", new Vector3(8f, 1.2f, 7.5f), new Vector3(0.8f, 2.4f, 9f), darkStone);
+        CreateMeshObject("WallL", "HD2D_Wall", new Vector3(-8f, 1.2f, 7.5f), darkStone);
+        CreateMeshObject("WallR", "HD2D_Wall", new Vector3(8f, 1.2f, 7.5f), darkStone);
 
         // 高台上的柱子
         for (int i = 0; i < 3; i++)
-            CreateCylinder("Column" + i, new Vector3(-4f + i * 4f, 2.6f, 10f),
-                new Vector3(1f, 2.6f, 1f), stone);
+            CreateMeshObject("Column" + i, "HD2D_Column", new Vector3(-4f + i * 4f, 2.6f, 10f), stone);
 
         // 火盆（点光源在 CreateLights 里，位置 4.5, 1.6, 2）
-        CreateCylinder("BrazierBase", new Vector3(4.5f, 0.5f, 2f), new Vector3(0.35f, 0.5f, 0.35f), darkStone);
-        CreateCylinder("BrazierBowl", new Vector3(4.5f, 1.05f, 2f), new Vector3(0.7f, 0.15f, 0.7f), wood);
+        CreateMeshObject("BrazierBase", "HD2D_BrazierBase", new Vector3(4.5f, 0.5f, 2f), darkStone);
+        CreateMeshObject("BrazierBowl", "HD2D_BrazierBowl", new Vector3(4.5f, 1.05f, 2f), darkStone);
 
         // 散落碎石
-        CreateBox("Rubble1", new Vector3(-3.2f, 0.15f, -1.2f), new Vector3(0.55f, 0.3f, 0.45f), stone);
-        CreateBox("Rubble2", new Vector3(3.4f, 0.12f, -2.4f), new Vector3(0.4f, 0.24f, 0.6f), stone);
-        CreateBox("Rubble3", new Vector3(-5.2f, 0.18f, 2.2f), new Vector3(0.7f, 0.36f, 0.5f), darkStone);
+        CreateMeshObject("Rubble1", "HD2D_RubbleA", new Vector3(-3.2f, 0.15f, -1.2f), stone);
+        CreateMeshObject("Rubble2", "HD2D_RubbleB", new Vector3(3.4f, 0.12f, -2.4f), stone);
+        CreateMeshObject("Rubble3", "HD2D_RubbleC", new Vector3(-5.2f, 0.18f, 2.2f), darkStone);
     }
 
-    static void CreateBox(string name, Vector3 pos, Vector3 scale, Material mat)
+    static void CreateMeshObject(string name, string meshName, Vector3 pos, Material mat)
     {
-        var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        go.name = name;
+        var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(LowPolyDir + meshName + ".asset");
+        if (mesh == null)
+        {
+            Debug.LogError("[HD2D] 找不到低模模块: " + meshName);
+            return;
+        }
+
+        var go = new GameObject(name);
         go.transform.SetPositionAndRotation(pos, Quaternion.identity);
-        go.transform.localScale = scale;
-        go.GetComponent<MeshRenderer>().sharedMaterial = mat;
-        var col = go.GetComponent<BoxCollider>();
-        if (col != null) Object.DestroyImmediate(col);
+        go.AddComponent<MeshFilter>().sharedMesh = mesh;
+        var mr = go.AddComponent<MeshRenderer>();
+        mr.sharedMaterial = mat;
+        mr.shadowCastingMode = ShadowCastingMode.On;
+        mr.receiveShadows = true;
     }
 
-    static void CreateCylinder(string name, Vector3 pos, Vector3 scale, Material mat)
+    // 原地复用材质资产，保留 GUID；否则每次重建场景都会让旧场景（如 HD2D_EnemyPerf）丢引用
+    static Material GetOrCreateMaterial(string path, Shader shader)
     {
-        var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        go.name = name;
-        go.transform.SetPositionAndRotation(pos, Quaternion.identity);
-        go.transform.localScale = scale;
-        go.GetComponent<MeshRenderer>().sharedMaterial = mat;
-        var col = go.GetComponent<CapsuleCollider>();
-        if (col != null) Object.DestroyImmediate(col);
+        var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (mat == null)
+        {
+            mat = new Material(shader) { name = System.IO.Path.GetFileNameWithoutExtension(path) };
+            AssetDatabase.CreateAsset(mat, path);
+        }
+        else if (mat.shader != shader)
+        {
+            mat.shader = shader;
+        }
+        return mat;
     }
 
     static Material CreateLitMaterial(string name, Color color)
     {
         var shader = Shader.Find("Universal Render Pipeline/Lit");
-        var mat = new Material(shader) { name = name };
+        var mat = GetOrCreateMaterial(SettingsDir + "/" + name + ".mat", shader);
         mat.SetColor("_BaseColor", color);
         mat.SetFloat("_Smoothness", 0.1f);
         mat.SetFloat("_Metallic", 0f);
-
-        var path = SettingsDir + "/" + name + ".mat";
-        AssetDatabase.DeleteAsset(path);
-        AssetDatabase.CreateAsset(mat, path);
+        EditorUtility.SetDirty(mat);
         return mat;
     }
 
@@ -222,16 +235,14 @@ public static class HD2DSceneSetup
         var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(
             "Assets/Textures/Background/bg_stone_floor.png");
         var shader = Shader.Find("Universal Render Pipeline/Lit");
-        var mat = new Material(shader) { name = name };
+        var mat = GetOrCreateMaterial(SettingsDir + "/" + name + ".mat", shader);
         mat.SetTexture("_BaseMap", tex);
-        mat.SetTextureScale("_BaseMap", new Vector2(2f, 2f));
+        // 低模 Mesh 的 UV 已按“每 6 米一次”生成，这里保持 1:1
+        mat.SetTextureScale("_BaseMap", Vector2.one);
         mat.SetColor("_BaseColor", tint);
         mat.SetFloat("_Smoothness", 0.06f);
         mat.SetFloat("_Metallic", 0f);
-
-        var path = SettingsDir + "/" + name + ".mat";
-        AssetDatabase.DeleteAsset(path);
-        AssetDatabase.CreateAsset(mat, path);
+        EditorUtility.SetDirty(mat);
         return mat;
     }
 
@@ -251,7 +262,8 @@ public static class HD2DSceneSetup
         if (billboard) go.AddComponent<BillboardSprite>();
     }
 
-    static Material CreateSpriteMaterial(string spritePath, string matName)
+    static Material CreateSpriteMaterial(string spritePath, string matName,
+        float ambientBoost, float outlineWidth, Color outlineColor, Color tint)
     {
         var sprite = LoadSprite(spritePath);
         var shader = Shader.Find("HD2D/SpriteLit");
@@ -261,32 +273,45 @@ public static class HD2DSceneSetup
             return null;
         }
 
-        var mat = new Material(shader) { name = matName };
+        var mat = GetOrCreateMaterial(SettingsDir + "/" + matName + ".mat", shader);
         mat.SetTexture("_MainTex", sprite.texture);
         mat.SetFloat("_Cutoff", 0.5f);
-        mat.SetFloat("_AmbientBoost", 0.75f);
-
-        var path = SettingsDir + "/" + matName + ".mat";
-        AssetDatabase.DeleteAsset(path);
-        AssetDatabase.CreateAsset(mat, path);
+        mat.SetFloat("_AmbientBoost", ambientBoost);
+        mat.SetColor("_Color", tint);
+        mat.SetColor("_OutlineColor", outlineWidth > 0f ? outlineColor : Color.clear);
+        mat.SetFloat("_OutlineWidth", outlineWidth);
+        EditorUtility.SetDirty(mat);
         return mat;
     }
 
     static Material CreateGroundMaterial()
     {
-        var tex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Textures/Background/bg_stone_floor.png");
-        var shader = Shader.Find("Universal Render Pipeline/Lit");
-        var mat = new Material(shader) { name = "HD2D_Ground" };
-        mat.SetTexture("_BaseMap", tex);
-        // tiling 从 8 降到 5：减少地砖重复的机械感
-        mat.SetTextureScale("_BaseMap", new Vector2(5f, 5f));
-        mat.SetColor("_BaseColor", new Color(0.80f, 0.80f, 0.85f));
-        mat.SetFloat("_Smoothness", 0.12f);
-        mat.SetFloat("_Metallic", 0f);
+        var baseTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Textures/Background/bg_stone_floor.png");
+        var detailTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Textures/bg_dungeon_floor.png");
+        var macroTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Textures/Background/bg_grunge_large.png");
+        var shader = Shader.Find("HD2D/Ground");
+        if (shader == null)
+        {
+            Debug.LogError("[HD2D] 找不到 HD2D/Ground shader");
+            return null;
+        }
 
-        var path = SettingsDir + "/HD2D_Ground.mat";
-        AssetDatabase.DeleteAsset(path);
-        AssetDatabase.CreateAsset(mat, path);
+        var mat = GetOrCreateMaterial(SettingsDir + "/HD2D_Ground.mat", shader);
+        mat.SetTexture("_BaseTex", baseTex);
+        mat.SetTexture("_DetailTex", detailTex);
+        mat.SetTexture("_MacroTex", macroTex);
+        // 三层使用互不成整数比的世界尺度，重复周期被错开
+        mat.SetFloat("_BaseScale", 0.062f);
+        mat.SetFloat("_BroadScale", 0.019f);
+        mat.SetFloat("_DetailScale", 0.13f);
+        mat.SetFloat("_MacroScale", 0.014f);
+        mat.SetFloat("_BroadStrength", 0.45f);
+        mat.SetFloat("_DetailStrength", 0.3f);
+        mat.SetFloat("_MacroStrength", 0.65f);
+        mat.SetFloat("_Ambient", 0.35f);
+        mat.SetColor("_BaseColor", new Color(1.00f, 0.99f, 1.02f));
+        mat.SetColor("_MacroTint", new Color(0.72f, 0.69f, 0.64f));
+        EditorUtility.SetDirty(mat);
         return mat;
     }
 
