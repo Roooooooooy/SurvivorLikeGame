@@ -8,6 +8,9 @@ Shader "HD2D/SpriteLit"
         _Color ("Tint", Color) = (1,1,1,1)
         _Cutoff ("Alpha Cutoff", Range(0,1)) = 0.5
         _AmbientBoost ("Ambient Boost", Range(0,2)) = 0.35
+        // 角色专属冷色描边；宽度为 0 时不做任何额外采样（其它精灵保持原样）
+        _OutlineColor ("Outline Color", Color) = (0.38,0.56,0.78,1)
+        _OutlineWidth ("Outline Width (texel)", Range(0,2)) = 0
     }
 
     SubShader
@@ -52,12 +55,15 @@ Shader "HD2D/SpriteLit"
 
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
+            float4 _MainTex_TexelSize;
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _MainTex_ST;
                 half4 _Color;
                 half _Cutoff;
                 half _AmbientBoost;
+                half4 _OutlineColor;
+                half _OutlineWidth;
             CBUFFER_END
 
             Varyings vert(Attributes v)
@@ -75,6 +81,23 @@ Shader "HD2D/SpriteLit"
             half4 frag(Varyings i) : SV_Target
             {
                 half4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv) * _Color;
+
+                // 外轮廓冷色描边：宽为 0 的材质（哥布林/柱子）完全不参与额外采样
+                if (tex.a < _Cutoff && _OutlineWidth > 0.001)
+                {
+                    float2 t = _MainTex_TexelSize.xy * _OutlineWidth;
+                    half n =
+                        SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv + float2(t.x, 0)).a +
+                        SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv - float2(t.x, 0)).a +
+                        SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv + float2(0, t.y)).a +
+                        SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv - float2(0, t.y)).a +
+                        SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv + t).a +
+                        SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv - t).a +
+                        SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv + float2(t.x, -t.y)).a +
+                        SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv + float2(-t.x, t.y)).a;
+                    if (n > _Cutoff * 2.0)
+                        return half4(_OutlineColor.rgb * (0.35 + _AmbientBoost * 0.4), 1.0);
+                }
                 clip(tex.a - _Cutoff);
 
                 float3 normalWS = normalize(i.normalWS);
@@ -143,6 +166,8 @@ Shader "HD2D/SpriteLit"
                 half4 _Color;
                 half _Cutoff;
                 half _AmbientBoost;
+                half4 _OutlineColor;
+                half _OutlineWidth;
             CBUFFER_END
 
             float3 _LightDirection;
@@ -219,6 +244,8 @@ Shader "HD2D/SpriteLit"
                 half4 _Color;
                 half _Cutoff;
                 half _AmbientBoost;
+                half4 _OutlineColor;
+                half _OutlineWidth;
             CBUFFER_END
 
             Varyings vert(Attributes v)
