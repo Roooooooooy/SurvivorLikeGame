@@ -65,6 +65,13 @@ public static class HudV2
             levelText.color = theme.goldHi;
         }
 
+        // 升级时等级徽章闪一下
+        var levelFlash = badge.GetComponent<HudLevelFlash>();
+        if (levelFlash == null) levelFlash = badge.gameObject.AddComponent<HudLevelFlash>();
+        levelFlash.badge = badgeImage;
+        levelFlash.baseColor = theme.panel;
+        levelFlash.flashColor = theme.goldHi;
+
         if (hud != null)
         {
             hud.expBarFill = fillImage;
@@ -85,11 +92,54 @@ public static class HudV2
             heart.sprite = UpgradeIcons.Load("ic_health");
             heart.preserveAspect = true;
             heart.color = Color.white;
+
+            // 25/50/75% 刻度，血条再长也能一眼看出剩余比例
+            for (int i = 1; i <= 3; i++)
+            {
+                float a = i * 0.25f;
+                var tick = EnsureRect(hpBar, "__HpTick" + i, new Vector2(a, 0f), new Vector2(a, 1f),
+                    new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1f, 0f));
+                var tickImage = tick.GetComponent<Image>();
+                tickImage.color = theme.WithAlpha(theme.gold, 0.35f);
+                tickImage.raycastTarget = false;
+                if (hpBar.childCount > 1) tick.SetSiblingIndex(1);
+            }
+
+            // 低血量脉冲
+            var hpFillTransform = hpBar.Find("hp");
+            var hpFillImage = hpFillTransform != null
+                ? hpFillTransform.GetComponent<Image>()
+                : (hud != null ? hud.healthBarFill : null);
+            var pulse = hpBar.GetComponent<HudHealthPulse>();
+            if (pulse == null) pulse = hpBar.gameObject.AddComponent<HudHealthPulse>();
+            pulse.fill = hpFillImage;
+            pulse.heart = heart;
+            pulse.baseColor = theme.blood;
+            pulse.hiColor = theme.bloodHi;
         }
 
         // ---------- 计时器 / 击杀数图标（贴着文字左缘） ----------
         AttachIcon(root.Find("TimerText"), "Icon", "ic_time");
         AttachIcon(root.Find("KillCountText"), "Icon", "ic_skull");
+
+        var kills = root.Find("KillCountText");
+        if (kills != null && kills.GetComponent<HudTextPunch>() == null)
+            kills.gameObject.AddComponent<HudTextPunch>();
+
+        // ---------- 金币计数 ----------
+        var existingCoins = root.Find("CoinsText");
+        var coins = existingCoins != null ? existingCoins.GetComponent<Text>() : null;
+        if (coins == null)
+            coins = UIFactory.CreateText(root, "CoinsText", "0", 18, theme.goldHi, TextAnchor.MiddleCenter);
+        var coinRt = coins.rectTransform;
+        coinRt.anchorMin = coinRt.anchorMax = new Vector2(1f, 1f);
+        coinRt.pivot = new Vector2(1f, 1f);
+        coinRt.anchoredPosition = new Vector2(-78f, -46f);
+        coinRt.sizeDelta = new Vector2(120f, 24f);
+        AttachIcon(coins.transform, "Icon", "ic_coin");
+        if (coins.GetComponent<HudTextPunch>() == null)
+            coins.gameObject.AddComponent<HudTextPunch>();
+        if (hud != null) hud.coinText = coins;
     }
 
     static void AttachIcon(Transform textTransform, string name, string iconName)

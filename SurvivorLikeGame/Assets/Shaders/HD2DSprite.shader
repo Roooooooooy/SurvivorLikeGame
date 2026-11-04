@@ -11,6 +11,9 @@ Shader "HD2D/SpriteLit"
         // 角色专属冷色描边；宽度为 0 时不做任何额外采样（其它精灵保持原样）
         _OutlineColor ("Outline Color", Color) = (0.38,0.56,0.78,1)
         _OutlineWidth ("Outline Width (texel)", Range(0,2)) = 0
+        // 深度状态：主角主体保持正常深度，被遮挡时由 HD2D/SpriteXRay 的剪影补可见性
+        _ZTest ("ZTest", Float) = 4
+        _ZWrite ("ZWrite", Float) = 1
     }
 
     SubShader
@@ -28,6 +31,8 @@ Shader "HD2D/SpriteLit"
             Name "ForwardLit"
             Tags { "LightMode" = "UniversalForward" }
             Cull Off
+            ZWrite [_ZWrite]
+            ZTest [_ZTest]
 
             HLSLPROGRAM
             #pragma vertex vert
@@ -43,6 +48,7 @@ Shader "HD2D/SpriteLit"
             {
                 float4 positionOS : POSITION;
                 float2 uv : TEXCOORD0;
+                float4 color : COLOR;
             };
 
             struct Varyings
@@ -51,6 +57,7 @@ Shader "HD2D/SpriteLit"
                 float2 uv : TEXCOORD0;
                 float3 positionWS : TEXCOORD1;
                 float3 normalWS : TEXCOORD2;
+                half4 color : TEXCOORD3;
             };
 
             TEXTURE2D(_MainTex);
@@ -73,6 +80,7 @@ Shader "HD2D/SpriteLit"
                 o.positionCS = pos.positionCS;
                 o.positionWS = pos.positionWS;
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.color = v.color;
                 // billboard 精灵：法线正对相机，受光方向随视角变化
                 o.normalWS = -normalize(GetWorldSpaceViewDir(pos.positionWS));
                 return o;
@@ -80,7 +88,7 @@ Shader "HD2D/SpriteLit"
 
             half4 frag(Varyings i) : SV_Target
             {
-                half4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv) * _Color;
+                half4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv) * _Color * i.color;
 
                 // 外轮廓冷色描边：宽为 0 的材质（哥布林/柱子）完全不参与额外采样
                 if (tex.a < _Cutoff && _OutlineWidth > 0.001)

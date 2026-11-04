@@ -20,6 +20,12 @@ Shader "HD2D/Ground"
         _DetailStrength ("Detail Strength", Range(0,1)) = 0.28
         _MacroStrength ("Macro Strength", Range(0,1)) = 0.5
         _Ambient ("Ambient Floor", Range(0,2)) = 0.35
+
+        // 湿渍与苔藓：让大块地面有冷暖/材质层次，而不是一片均匀石板
+        _WetStrength ("Wet Strength", Range(0,1)) = 0.35
+        _WetColor ("Wet Sheen Color", Color) = (0.42,0.55,0.75,1)
+        _MossStrength ("Moss Strength", Range(0,1)) = 0.22
+        _MossColor ("Moss Tint", Color) = (0.45,0.55,0.32,1)
     }
 
     SubShader
@@ -73,7 +79,30 @@ Shader "HD2D/Ground"
                 float _DetailStrength;
                 float _MacroStrength;
                 float _Ambient;
+                float _WetStrength;
+                float4 _WetColor;
+                float _MossStrength;
+                float4 _MossColor;
             CBUFFER_END
+
+            float Hash21(float2 p)
+            {
+                p = frac(p * float2(123.34, 456.21));
+                p += dot(p, p + 45.32);
+                return frac(p.x * p.y);
+            }
+
+            float ValueNoise(float2 p)
+            {
+                float2 i = floor(p);
+                float2 f = frac(p);
+                f = f * f * (3.0 - 2.0 * f);
+                float a = Hash21(i);
+                float b = Hash21(i + float2(1.0, 0.0));
+                float c = Hash21(i + float2(0.0, 1.0));
+                float d = Hash21(i + float2(1.0, 1.0));
+                return lerp(lerp(a, b, f.x), lerp(c, d, f.x), f.y);
+            }
 
             Varyings vert(Attributes v)
             {
@@ -99,6 +128,15 @@ Shader "HD2D/Ground"
                 half broadLum = dot(broadCol, half3(0.299, 0.587, 0.114));
                 half stain = saturate(1.0 - macroLum);
 
+                // 湿渍：暗色污渍区域更容易积水，压低反照率并加冷色高光
+                half wet = saturate(stain * 1.15) * _WetStrength;
+
+                // 苔藓：低频噪声 + 污渍区域，给阴湿角落一点冷绿色
+                half mossNoise = ValueNoise(worldUV * 0.42 + 13.7);
+                half moss = smoothstep(0.55, 0.78, mossNoise)
+                          * smoothstep(0.25, 0.75, stain)
+                          * _MossStrength;
+
                 // 同一张贴图再做一个 47m 周期的低频明暗，只调制亮度、不叠加砖缝
                 half broadShade = lerp(1.0 - _BroadStrength * 0.5, 1.0 + _BroadStrength * 0.5,
                     saturate(broadLum * 1.2));
@@ -112,6 +150,11 @@ Shader "HD2D/Ground"
                 albedo *= macroShade * broadShade;
                 albedo = lerp(albedo, albedo * _MacroTint.rgb, stain * _MacroStrength);
                 albedo *= _BaseColor.rgb;
+
+                // 湿渍压暗、苔藓染色；最后轻微提亮暗部，避免砖缝死黑
+                albedo *= lerp(1.0, 0.90, wet);
+                albedo = lerp(albedo, albedo * _MossColor.rgb, moss);
+                albedo = pow(max(albedo, 1e-4), 0.92);
 
                 float3 normalWS = normalize(i.normalWS);
                 float4 shadowCoord = TransformWorldToShadowCoord(i.positionWS);
@@ -132,6 +175,13 @@ Shader "HD2D/Ground"
                 lighting = max(lighting, ambient);
 
                 half3 color = albedo * lighting;
+
+                // 湿面高光：只加在积水区域，用冷色模拟天光反射
+                float3 viewDirWS = normalize(GetWorldSpaceViewDir(i.positionWS));
+                float3 halfDir = normalize(mainLight.direction + viewDirWS);
+                half spec = pow(saturate(dot(normalWS, halfDir)), 72.0);
+                color += _WetColor.rgb * (spec * wet * 0.5);
+
                 color = MixFog(color, i.fogCoord);
                 return half4(color, 1.0);
             }

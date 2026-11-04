@@ -48,6 +48,10 @@ public class EnemyTypeData
     public int animFrames = 1;      // 图集横向帧数，1 = 静态
     public float animFps = 10f;
     public bool hasDeathAnim = false; // 图集第 2 行是死亡动画（行走=第 1 行）
+
+    [Header("渲染裁剪（由 Tools/HD2D/9 生成）")]
+    [Tooltip("单帧内不透明内容的归一化矩形 (x, y, width, height)，y 从单元格底部起；全 0 表示不裁剪")]
+    public Vector4 contentRect = new Vector4(0f, 0f, 1f, 1f);
 }
 
 [CreateAssetMenu(fileName = "EnemyTypes", menuName = "Survivor/Enemy Type Table")]

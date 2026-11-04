@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: HD2D_GroundGame
+  m_Shader: {fileID: 4800000, guid: 3e9632cf47eff49c5ba8389b6691a965, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseTex:
+        m_Texture: {fileID: 2800000, guid: c43c5e2f8c82a4ae8bcf739bf5b455c9, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailTex:
+        m_Texture: {fileID: 2800000, guid: 59e226777a72469b9268af36cd341571, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MacroTex:
+        m_Texture: {fileID: 2800000, guid: 50f5a509103484ef5b700f770efcac81, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Ambient: 0.52
+    - _BaseScale: 0.09
+    - _BroadScale: 0.019
+    - _BroadStrength: 0.35
+    - _DetailScale: 0.13
+    - _DetailStrength: 0.38
+    - _MacroScale: 0.014
+    - _MacroStrength: 0.55
+    - _MossStrength: 0.1
+    - _WetStrength: 0.22
+    m_Colors:
+    - _BaseColor: {r: 1.2, g: 1.16, b: 1.16, a: 1}
+    - _MacroTint: {r: 0.72, g: 0.72, b: 0.74, a: 1}
+    - _MossColor: {r: 0.52, g: 0.56, b: 0.42, a: 1}
+    - _WetColor: {r: 0.42, g: 0.55, b: 0.75, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

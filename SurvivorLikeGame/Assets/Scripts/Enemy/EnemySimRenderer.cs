@@ -17,6 +17,7 @@ public partial class EnemySimulation
         public float[] outlines;  // 逐实例描边强度（精英/Boss = 1，其余 0）
         public float[] dissolves; // 逐实例死亡溶解进度（0=不溶解，1=完全溶解）
         public float[] sortKeys;  // 逐实例排序键（HD-2D：-世界 Z，先画远端）
+        public Vector4 trimRect;  // 单帧不透明内容矩形（HD-2D 裁剪 overdraw 用）
         public int count;
     }
 
@@ -131,10 +132,9 @@ public partial class EnemySimulation
             typeAnimFps[i] = t.animFps;
             typeHasDeathAnim[i] = t.hasDeathAnim;
             typeDeathDuration[i] = t.hasDeathAnim ? t.animFrames / t.animFps : 0.15f;
-            // 精英/Boss 描边判定：体型放大、Boss 行为或高血量，三者满足其一即可
-            typeOutline[i] = t.scale >= 1.7f
-                || t.behavior == EnemyBehavior.Boss
-                || t.maxHealth >= 200;
+            // 精英/Boss 描边判定：高血量或 Boss 行为。体型放大本身不再触发描边，
+            // 否则 16×16 的大怪贴图会被 1.25 texel 的粗边包成一块色块。
+            typeOutline[i] = t.behavior == EnemyBehavior.Boss || t.maxHealth >= 200;
 
             if (sprite == null)
             {
@@ -147,14 +147,19 @@ public partial class EnemySimulation
             int rows = t.hasDeathAnim ? 2 : 1;
             typeFrameSize[i] = new Vector2(sprite.bounds.size.x / typeAnimFrames[i], sprite.bounds.size.y / rows);
 
+            // 单帧内容矩形：把四周透明留白裁掉，减少 alpha clip 之前跑的无用片元。
+            // 编辑器工具 Tools/HD2D/9 会把实测值写回 EnemyTypes.asset；未分析过时为全帧。
+            Vector4 trim = hd2d ? NormalizeTrim(t.contentRect) : new Vector4(0f, 0f, 1f, 1f);
+
             if (!batchByTexture.TryGetValue(sprite.texture, out var batch))
             {
                 var mat = new Material(shader) { mainTexture = sprite.texture, enableInstancing = true };
                 mat.SetFloat("_Frames", typeAnimFrames[i]);
                 mat.SetFloat("_Rows", t.hasDeathAnim ? 2f : 1f);
-                // 描边宽约 1.25 个图集像素，颜色偏暗金；溶解边缘用余烬橙
+                // 描边宽约 1.25 个图集像素；16×16 的小贴图按比例收细，避免糊成一圈色块
+                float outlineWidth = sprite.texture.width < 64 ? 0.6f : 1.25f;
                 mat.SetColor("_OutlineColor", new Color(0.78f, 0.58f, 0.16f, 1f));
-                mat.SetFloat("_OutlineWidth", 1.25f);
+                mat.SetFloat("_OutlineWidth", outlineWidth);
                 mat.SetColor("_DissolveEdge", new Color(1f, 0.55f, 0.18f, 1f));
                 if (hd2d)
                 {
@@ -167,10 +172,12 @@ public partial class EnemySimulation
                     mat.SetColor("_FakeLightColor", new Color(1f, 0.94f, 0.86f, 1f));
                     mat.SetColor("_AmbientColor", new Color(0.42f, 0.46f, 0.55f, 1f));
                     mat.SetVector("_FakeLightDir", new Vector4(0.35f, 0.7f, 0f, 0f));
+                    mat.SetVector("_TrimRect", trim);
                 }
                 batch = new RenderBatch
                 {
                     material = mat,
+                    trimRect = trim,
                     matrices = new Matrix4x4[maxEnemies],
                     colors = new Vector4[maxEnemies],
                     frames = new float[maxEnemies],
@@ -182,6 +189,11 @@ public partial class EnemySimulation
                 };
                 batchByTexture[sprite.texture] = batch;
                 batchList.Add(batch);
+            }
+            else if (hd2d && (batch.trimRect - trim).sqrMagnitude > 1e-8f)
+            {
+                // 同贴图的类型共享一个 quad/材质，裁剪矩形必须一致
+                Debug.LogWarning($"EnemySimulation: 类型 {t.typeName} 与共享贴图的其他类型裁剪矩形不一致，沿用首个类型");
             }
             typeBatchIndex[i] = batchList.IndexOf(batch);
         }
@@ -284,31 +296,39 @@ public partial class EnemySimulation
             if (hd2d)
             {
                 // 逻辑 (x, y) -> 世界 (x, 0, y)；脚底 pivot 的 quad 直接贴地。
-                Vector3 worldPos = new Vector3(e.position.x, 0f, e.position.y);
+                Vector3 groundPos = new Vector3(e.position.x, 0f, e.position.y);
                 Quaternion rot = Quaternion.identity;
                 if (cachedCamera != null)
                 {
                     // 只绕 Y 轴朝向相机（HD-2D billboard），保持脚底始终贴地
-                    Vector3 toCam = cachedCamera.transform.position - worldPos;
+                    Vector3 toCam = cachedCamera.transform.position - groundPos;
                     toCam.y = 0f;
                     if (toCam.sqrMagnitude > 1e-6f)
                         rot = Quaternion.LookRotation(toCam, Vector3.up);
                 }
 
+                // 按内容矩形收紧 quad：透明留白不再提交片元，同时保持角色脚底/相对位置不变
+                Vector4 trim = batch.trimRect;
+                Vector2 quadSize = new Vector2(size.x * trim.z, size.y * trim.w);
+                Vector3 right = rot * Vector3.right;
+                Vector3 worldPos = groundPos;
+                worldPos += right * ((trim.x + trim.z * 0.5f - 0.5f) * size.x * flip);
+                worldPos.y += trim.y * size.y;
+
                 batch.matrices[k] = Matrix4x4.TRS(
                     worldPos, rot,
-                    new Vector3(size.x * flip, size.y, 1f));
+                    new Vector3(quadSize.x * flip, quadSize.y, 1f));
 
                 // 世界 Z 越大离相机越远：先画远端，近端后画（配合 depth test 双保险）
                 batch.sortKeys[k] = -e.position.y;
 
                 if (shadowMaterial != null && shadowCount < shadowMats.Length)
                 {
-                    // 贴地椭圆：宽度跟精灵走，纵深压扁；高度抬 2cm 防止和地面 z-fighting
+                    // 贴地椭圆：宽度跟内容走，纵深压扁；高度抬 2cm 防止和地面 z-fighting
                     shadowMats[shadowCount++] = Matrix4x4.TRS(
-                        new Vector3(worldPos.x, 0.02f, worldPos.z),
+                        new Vector3(groundPos.x, 0.02f, groundPos.z),
                         Quaternion.identity,
-                        new Vector3(size.x * 0.46f, 1f, size.y * 0.16f));
+                        new Vector3(quadSize.x * 0.46f, 1f, quadSize.y * 0.16f));
                 }
             }
             else
@@ -396,6 +416,17 @@ public partial class EnemySimulation
                 drawn += n;
             }
         }
+    }
+
+    // 兜底：旧资产没有裁剪数据时按整帧处理，避免 quad 缩成 0
+    static Vector4 NormalizeTrim(Vector4 r)
+    {
+        if (r.z <= 1e-4f || r.w <= 1e-4f) return new Vector4(0f, 0f, 1f, 1f);
+        float x = Mathf.Clamp(r.x, 0f, 0.998f);
+        float y = Mathf.Clamp(r.y, 0f, 0.998f);
+        float w = Mathf.Clamp(r.z, 0.002f, 1f - x);
+        float h = Mathf.Clamp(r.w, 0.002f, 1f - y);
+        return new Vector4(x, y, w, h);
     }
 
     static Mesh CreateQuad()
