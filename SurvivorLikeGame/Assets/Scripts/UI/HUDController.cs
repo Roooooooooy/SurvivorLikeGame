@@ -11,6 +11,9 @@ public class HUDController : MonoBehaviour
     public Image expBarFill;
     public Text levelText;
 
+    [Header("Coins")]
+    public Text coinText;
+
     void Update()
     {
         var player = PlayerController.Instance;
@@ -20,5 +23,6 @@ public class HUDController : MonoBehaviour
         if (healthText) healthText.text = player.currentHealth + "/" + player.maxHealth;
         if (expBarFill) expBarFill.fillAmount = player.GetExpPercent();
         if (levelText) levelText.text = "Lv." + player.level;
+        if (coinText) coinText.text = RunStats.Current.CoinsEarned.ToString();
     }
 }

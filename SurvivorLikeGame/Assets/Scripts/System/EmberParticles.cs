@@ -151,9 +151,22 @@ public class EmberParticles : MonoBehaviour
         }
 
         var pos = cam.transform.position;
-        transform.position = new Vector3(pos.x, pos.y, 0f);
+        bool hd2d = !cam.orthographic;
 
-        float baseHeight = cam.orthographic ? cam.orthographicSize * 2f : 10f;
+        // HD-2D 是透视俯视：发射区域要贴地并围绕玩家，而不是留在镜头的 XY 平面
+        Vector3 center;
+        if (hd2d && PlayerController.Instance != null)
+        {
+            Vector3 p = PlayerController.Instance.transform.position; // 逻辑 (x, y)
+            center = new Vector3(p.x, 0.6f, p.y);
+        }
+        else
+        {
+            center = new Vector3(pos.x, pos.y, 0f);
+        }
+        transform.position = center;
+
+        float baseHeight = cam.orthographic ? cam.orthographicSize * 2f : 16f;
         float height = baseHeight + spawnPadding * 2f;
         float width = baseHeight * Mathf.Max(cam.aspect, 0.5f) + spawnPadding * 2f;
 
@@ -165,15 +178,17 @@ public class EmberParticles : MonoBehaviour
         lastAreaWidth = width;
         lastAreaHeight = height;
 
-        SetShapeScale(embers, width, height);
-        SetShapeScale(dust, width, height);
+        SetShapeScale(embers, width, height, hd2d);
+        SetShapeScale(dust, width, height, hd2d);
     }
 
-    static void SetShapeScale(ParticleSystem ps, float width, float height)
+    static void SetShapeScale(ParticleSystem ps, float width, float height, bool groundPlane)
     {
         if (ps == null) return;
         var shape = ps.shape;
-        shape.scale = new Vector3(width, height, 0.1f);
+        shape.scale = groundPlane
+            ? new Vector3(width, 0.1f, height)
+            : new Vector3(width, height, 0.1f);
     }
 
     // 运行时创建一颗粒子系统；所有模块只在这里配置一次，避免逐帧 GC

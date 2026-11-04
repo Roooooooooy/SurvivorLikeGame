@@ -30,3 +30,15 @@
 - **Noto Serif SC**（SIL Open Font License 1.1）
   https://fonts.google.com/noto/specimen/Noto+Serif+SC
   由 Google Fonts 的 NotoSerifSC 变量字体生成项目用子集；许可证见 `Assets/Fonts/NotoSerifSC-OFL.txt`
+
+## 主角 Spine（Catalyst 猫）
+- **Catalyst demo cat** — 来自 `bendmorris/catalyst-demo`
+  https://github.com/bendmorris/catalyst-demo
+  原始数据为 Spine 3.6，已转换为 Spine 4.1 JSON；28 个动作，`custom` 基础皮肤 + `default` 帽子/眼镜/翅膀等附件。
+- 该仓库没有附带 LICENSE 文件；看起来是 Spine/Catalyst 示例资源。**发布前请确认你的 Spine Editor 授权以及该猫素材的使用许可**。
+
+## Spine 运行时
+- **Esoteric Software — spine-runtimes 4.1**
+  https://github.com/EsotericSoftware/spine-runtimes
+  采用 Spine Runtimes License；许可证保留在 `Assets/Addons/Spine/LICENSE`。
+

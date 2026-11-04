@@ -167,6 +167,7 @@ public class ObstacleField : MonoBehaviour
         ob.transform.position = new Vector3(pos.x, pos.y, 1.5f);
         ob.gameObject.SetActive(true);
         ob.Init(this, cfg.sprite, cfg.radius, cfg.hp, key);
+        Hd2dSpriteBridge.Instance?.Register(ob.gameObject);
 
         cells[key] = ob;
         active.Add(ob);

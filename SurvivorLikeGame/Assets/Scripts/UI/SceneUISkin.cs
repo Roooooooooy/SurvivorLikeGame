@@ -71,10 +71,12 @@ public static class SceneUISkin
         {
             var strip = root.Find("__XPStrip");
             var rule = root.Find("__XPRule");
+            var coins = root.Find("CoinsText");
             driverRef.extras = new[]
             {
                 strip != null ? strip.gameObject : null,
                 rule != null ? rule.gameObject : null,
+                coins != null ? coins.gameObject : null,
             };
         }
 

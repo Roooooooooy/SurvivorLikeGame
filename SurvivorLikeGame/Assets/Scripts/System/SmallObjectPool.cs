@@ -17,6 +17,9 @@ public static class SmallObjectPool
     static readonly Dictionary<GameObject, int> createdCounts = new Dictionary<GameObject, int>();
     static readonly Dictionary<GameObject, int> reusedCounts = new Dictionary<GameObject, int>();
 
+    // 池对象激活后的通知（HD-2D 视觉桥用它登记 billboard 代理；无订阅者时零开销）
+    public static event System.Action<GameObject> Spawned;
+
     // 运行期统计：Play 模式 Console 里用于确认复用生效
     public static int TotalCreated { get; private set; }
     public static int TotalReused { get; private set; }
@@ -40,6 +43,7 @@ public static class SmallObjectPool
         TotalCreated = 0;
         TotalReused = 0;
         TotalReleased = 0;
+        Spawned = null;
     }
 
     static GameObject PoolRoot
@@ -99,6 +103,7 @@ public static class SmallObjectPool
         go.transform.SetPositionAndRotation(position, rotation);
         ResetPhysics(go);
         go.SetActive(true);
+        Spawned?.Invoke(go);
 
 #if UNITY_EDITOR
         LogStatsIfDue();

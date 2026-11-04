@@ -9,6 +9,8 @@ Shader "Survivor/URPInstancedSprite"
         _Cutoff ("Alpha Cutoff", Range(0,1)) = 0.5
         _Frames ("Frame Count", Float) = 1
         _Rows ("Row Count", Float) = 1
+        // 单帧内不透明内容的归一化矩形 (x, y, w, h)，用来裁掉透明留白、减少 overdraw
+        _TrimRect ("Content Rect", Vector) = (0, 0, 1, 1)
         _OutlineColor ("Outline Color", Color) = (0.78, 0.58, 0.16, 1)
         _OutlineWidth ("Outline Width (texel)", Float) = 1.25
         _DissolveEdge ("Dissolve Edge Color", Color) = (1, 0.55, 0.18, 1)
@@ -52,6 +54,7 @@ Shader "Survivor/URPInstancedSprite"
                 half _Cutoff;
                 float _Frames;
                 float _Rows;
+                float4 _TrimRect;
                 half4 _OutlineColor;
                 float _OutlineWidth;
                 half4 _DissolveEdge;
@@ -116,8 +119,10 @@ Shader "Survivor/URPInstancedSprite"
                 // 图集帧动画：横向按帧等分、纵向按行等分（row0=行走，row1=死亡）
                 float frame = UNITY_ACCESS_INSTANCED_PROP(Props, _Frame);
                 float row = UNITY_ACCESS_INSTANCED_PROP(Props, _Row);
-                o.uv = float2((v.uv.x + frame) / max(1.0, _Frames),
-                              (v.uv.y + row) / max(1.0, _Rows));
+                // 四边形已经收紧到内容矩形，这里把 0..1 的 uv 映射回单元格内的内容区域
+                float2 cellUV = _TrimRect.xy + v.uv * _TrimRect.zw;
+                o.uv = float2((cellUV.x + frame) / max(1.0, _Frames),
+                              (cellUV.y + row) / max(1.0, _Rows));
                 o.localUV = v.uv;
                 return o;
             }

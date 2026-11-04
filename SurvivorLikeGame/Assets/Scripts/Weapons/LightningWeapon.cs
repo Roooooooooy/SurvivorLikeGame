@@ -125,8 +125,17 @@ public class LightningWeapon : AdvancedWeaponBase
         line.material = mat;
         line.useWorldSpace = true;
         line.positionCount = 2;
-        line.SetPosition(0, new Vector3(a.x, a.y, 0f));
-        line.SetPosition(1, new Vector3(b.x, b.y, 0f));
+        if (Hd2dSpriteBridge.Active)
+        {
+            // HD-2D：电弧放在地面上方，LineRenderer 默认面向相机
+            line.SetPosition(0, new Vector3(a.x, 0.6f, a.y));
+            line.SetPosition(1, new Vector3(b.x, 0.6f, b.y));
+        }
+        else
+        {
+            line.SetPosition(0, new Vector3(a.x, a.y, 0f));
+            line.SetPosition(1, new Vector3(b.x, b.y, 0f));
+        }
 
         float width = 0.09f * (Stats != null ? Stats.areaMultiplier : 1f);
         line.startWidth = width;
