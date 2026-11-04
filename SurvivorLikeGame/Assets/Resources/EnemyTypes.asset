@@ -45,6 +45,7 @@ MonoBehaviour:
     animFrames: 10
     animFps: 10
     hasDeathAnim: 1
+    contentRect: {x: 0.234375, y: 0, z: 0.53125, w: 0.515625}
   - typeName: NormalB
     sprite: {fileID: 21300000, guid: c329f8a0cc5c4b40af958b913e2d2681, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
@@ -74,8 +75,9 @@ MonoBehaviour:
     animFrames: 10
     animFps: 10
     hasDeathAnim: 1
+    contentRect: {x: 0.234375, y: 0, z: 0.53125, w: 0.515625}
   - typeName: Fast
-    sprite: {fileID: 21300000, guid: bc00e087764c42ed9c2a30eef908a8ae, type: 3}
+    sprite: {fileID: 21300000, guid: EE2070D72AF04565A0E344210B0006FE, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
     scale: 1.3
     moveSpeed: 5.5
@@ -100,9 +102,10 @@ MonoBehaviour:
     bossBarrageCount: 12
     bossBarrageSpeed: 5
     bossBarrageDamage: 12
-    animFrames: 10
-    animFps: 13
-    hasDeathAnim: 1
+    animFrames: 1
+    animFps: 10
+    hasDeathAnim: 0
+    contentRect: {x: 0, y: 0, z: 1, w: 1}
   - typeName: Tank
     sprite: {fileID: 21300000, guid: f345426a93514919a26eae357062197c, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
@@ -132,6 +135,7 @@ MonoBehaviour:
     animFrames: 10
     animFps: 7
     hasDeathAnim: 1
+    contentRect: {x: 0.234375, y: 0, z: 0.53125, w: 0.515625}
   - typeName: Exploder
     sprite: {fileID: 21300000, guid: 57cc3a0a0dc34fc4803c0402c11568dd, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
@@ -161,6 +165,7 @@ MonoBehaviour:
     animFrames: 3
     animFps: 10
     hasDeathAnim: 0
+    contentRect: {x: 0.010416664, y: 0, z: 0.9791667, w: 0.9791666}
   - typeName: Ranged
     sprite: {fileID: 21300000, guid: cb7923f479164f39af32cf51537c9283, type: 3}
     color: {r: 1, g: 1, b: 1, a: 1}
@@ -190,9 +195,10 @@ MonoBehaviour:
     animFrames: 1
     animFps: 10
     hasDeathAnim: 0
+    contentRect: {x: 0, y: 0, z: 1, w: 1}
   - typeName: Elite
-    sprite: {fileID: 21300000, guid: f345426a93514919a26eae357062197c, type: 3}
-    color: {r: 1, g: 0.55, b: 0.4, a: 1}
+    sprite: {fileID: 21300000, guid: CD9F29214ADD47EA91359FF38505B7F2, type: 3}
+    color: {r: 0.88, g: 0.94, b: 1, a: 1}
     scale: 2.2
     moveSpeed: 2.2
     maxHealth: 320
@@ -216,9 +222,10 @@ MonoBehaviour:
     bossBarrageCount: 12
     bossBarrageSpeed: 5
     bossBarrageDamage: 12
-    animFrames: 10
-    animFps: 8
-    hasDeathAnim: 1
+    animFrames: 1
+    animFps: 10
+    hasDeathAnim: 0
+    contentRect: {x: 0, y: 0, z: 1, w: 1}
   - typeName: BossPlaceholder
     sprite: {fileID: 21300000, guid: d3726a1da603442fa067567e4a04e7b5, type: 3}
     color: {r: 0.85, g: 0.45, b: 1, a: 1}
@@ -248,3 +255,4 @@ MonoBehaviour:
     animFrames: 10
     animFps: 6
     hasDeathAnim: 1
+    contentRect: {x: 0.234375, y: 0, z: 0.53125, w: 0.515625}

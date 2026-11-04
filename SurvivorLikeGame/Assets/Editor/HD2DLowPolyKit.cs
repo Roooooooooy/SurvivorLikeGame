@@ -24,6 +24,9 @@ public static class HD2DLowPolyKit
 
         Save("HD2D_BrazierBase", Prism(0.175f, 0.155f, 1.0f, 8, 9002, 0f, 0f));
         Save("HD2D_BrazierBowl", Prism(0.24f, 0.38f, 0.3f, 16, 9003, 0f, 0.02f));
+        Save("HD2D_Brazier", Brazier(9200));
+        Save("HD2D_Sarcophagus", Sarcophagus(9100));
+        Save("HD2D_Crate", ChamferBox(new Vector3(1f, 1f, 1f), 0.08f, 9300, 0.03f, 0.015f));
 
         Save("HD2D_RubbleA", ChamferBox(new Vector3(0.55f, 0.3f, 0.45f), 0.06f, 32, 0f, 0.10f));
         Save("HD2D_RubbleB", ChamferBox(new Vector3(0.4f, 0.24f, 0.6f), 0.05f, 33, 0f, 0.12f));
@@ -193,6 +196,26 @@ public static class HD2DLowPolyKit
             mb.AddPoly(top[0], top[i], top[i + 1]);
     }
 
+    static Mesh Brazier(int seed)
+    {
+        var mb = new MeshBuilder();
+        PrismInto(mb, new Vector3(0f, 0.5f, 0f), 0.35f, 0.30f, 1.0f, 8, seed, 0f, 0f);
+        PrismInto(mb, new Vector3(0f, 1.05f, 0f), 0.28f, 0.45f, 0.3f, 12, seed + 1, 0f, 0.02f);
+        return mb.ToMesh("HD2D_Brazier");
+    }
+
+    static Mesh Sarcophagus(int seed)
+    {
+        var mb = new MeshBuilder();
+        var body = ChamferBox(new Vector3(2.0f, 0.5f, 0.9f), 0.05f, seed, 0.03f, 0.01f);
+        mb.Append(body, new Vector3(0f, 0.25f, 0f));
+        Object.DestroyImmediate(body);
+        var lid = ChamferBox(new Vector3(2.1f, 0.18f, 1.0f), 0.03f, seed + 1, 0.02f, 0.01f);
+        mb.Append(lid, new Vector3(0f, 0.59f, 0f));
+        Object.DestroyImmediate(lid);
+        return mb.ToMesh("HD2D_Sarcophagus");
+    }
+
     // 带倒角的盒子：6 个内缩面 + 12 条倒角边 + 8 个角三角面。
     // damage 会压低顶面附近顶点（形成破损边缘），roughness 给全表面加微起伏。
     static Mesh ChamferBox(Vector3 size, float bevel, int seed, float damage, float roughness)
@@ -360,6 +383,24 @@ public static class HD2DLowPolyKit
             if (ax >= az)
                 return new Vector2(p.z, p.y) * UvPerMeter;
             return new Vector2(p.x, p.y) * UvPerMeter;
+        }
+
+        public void Append(Mesh mesh, Vector3 offset)
+        {
+            if (mesh == null) return;
+            int start = verts.Count;
+            var v = mesh.vertices;
+            var n = mesh.normals;
+            var uv = mesh.uv;
+            var t = mesh.triangles;
+            for (int i = 0; i < v.Length; i++)
+            {
+                verts.Add(v[i] + offset);
+                normals.Add(n[i]);
+                uvs.Add(uv[i]);
+            }
+            for (int i = 0; i < t.Length; i++)
+                tris.Add(t[i] + start);
         }
 
         public Mesh ToMesh(string name)
