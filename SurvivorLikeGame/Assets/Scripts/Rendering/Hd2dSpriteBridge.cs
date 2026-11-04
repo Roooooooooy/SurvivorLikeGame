@@ -152,6 +152,7 @@ public class Hd2dSpriteBridge : MonoBehaviour
     public void Register(SpriteRenderer source)
     {
         if (source == null || proxies.ContainsKey(source)) return;
+        if (source.forceRenderingOff) return;
         if (source.GetComponent<Hd2dProxyMarker>() != null) return;
         if (root != null && source.transform.IsChildOf(root)) return;
 
@@ -165,8 +166,8 @@ public class Hd2dSpriteBridge : MonoBehaviour
         bool isPlayer = source.GetComponentInParent<PlayerController>() != null;
         bool isObstacle = !isPlayer && source.GetComponentInParent<Obstacle>() != null;
 
-        // 主角已由 Spine 视图接管时，不再创建 2D billboard 代理
-        if (isPlayer && Hd2dSpinePlayer.Active)
+        // 主角已由 Spine / 8 方向像素视图接管时，不再创建 2D billboard 代理
+        if (isPlayer && (Hd2dSpinePlayer.Active || Hd2dPixelPlayer.Active))
         {
             source.forceRenderingOff = true;
             return;

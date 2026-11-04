@@ -9,6 +9,7 @@ public partial class EnemySimulation
     class RenderBatch
     {
         public Material material;
+        public Material xrayMaterial;
         public Matrix4x4[] matrices;
         public Vector4[] colors;
         public float[] frames;   // 逐实例动画帧索引
@@ -55,11 +56,16 @@ public partial class EnemySimulation
     // 供压测/调试读取：本帧敌人实际提交的 draw call 与实例数
     public int LastEnemyDrawCalls { get; private set; }
     public int LastShadowDrawCalls { get; private set; }
+    public int LastXRayDrawCalls { get; private set; }
     public int LastRenderedInstances { get; private set; }
 
     [Header("HD-2D")]
     [Tooltip("开启后逻辑 (x,y) 映射到世界 (x,0,y)，并使用 URP alpha-clip 精灵。默认关闭，避免影响未迁移的 SampleScene。")]
     public bool hd2dRendering = false;
+
+    [Header("敌人遮挡 XRay")]
+    public bool enemyXray = true;
+    public Color enemyXrayColor = new Color(1f, 0.42f, 0.12f, 0.40f);
 
     void InitRenderer()
     {
@@ -79,6 +85,14 @@ public partial class EnemySimulation
         hd2d = shader.name == "Survivor/URPInstancedSprite";
         if (hd2dRendering && !hd2d)
             Debug.LogWarning("EnemySimulation: 已开启 hd2dRendering，但 URP 未启用或找不到 Survivor/URPInstancedSprite，回退到内置管线路径");
+
+        Shader xrayShader = null;
+        if (hd2d && enemyXray)
+        {
+            xrayShader = Shader.Find("Survivor/URPInstancedSpriteXRay");
+            if (xrayShader == null)
+                Debug.LogWarning("EnemySimulation: 找不到 Survivor/URPInstancedSpriteXRay，敌人 XRay 已跳过");
+        }
 
         quad = hd2d ? CreateHd2dQuad() : CreateQuad();
         sortOrder = new int[maxEnemies];
@@ -174,9 +188,27 @@ public partial class EnemySimulation
                     mat.SetVector("_FakeLightDir", new Vector4(0.35f, 0.7f, 0f, 0f));
                     mat.SetVector("_TrimRect", trim);
                 }
+
+                Material xrayMat = null;
+                if (xrayShader != null)
+                {
+                    xrayMat = new Material(xrayShader)
+                    {
+                        mainTexture = sprite.texture,
+                        enableInstancing = true,
+                    };
+                    xrayMat.SetFloat("_Frames", typeAnimFrames[i]);
+                    xrayMat.SetFloat("_Rows", t.hasDeathAnim ? 2f : 1f);
+                    xrayMat.SetVector("_TrimRect", trim);
+                    xrayMat.SetFloat("_Cutoff", 0.5f);
+                    xrayMat.SetColor("_XRayColor", enemyXrayColor);
+                    xrayMat.renderQueue = 2602;
+                }
+
                 batch = new RenderBatch
                 {
                     material = mat,
+                    xrayMaterial = xrayMat,
                     trimRect = trim,
                     matrices = new Matrix4x4[maxEnemies],
                     colors = new Vector4[maxEnemies],
@@ -204,7 +236,10 @@ public partial class EnemySimulation
     {
         if (batches != null)
             foreach (var b in batches)
+            {
                 if (b.material != null) Destroy(b.material);
+                if (b.xrayMaterial != null) Destroy(b.xrayMaterial);
+            }
         if (quad != null) Destroy(quad);
         if (shadowQuad != null) Destroy(shadowQuad);
         if (shadowMaterial != null) Destroy(shadowMaterial);
@@ -219,6 +254,7 @@ public partial class EnemySimulation
         int shadowCount = 0;
         LastEnemyDrawCalls = 0;
         LastShadowDrawCalls = 0;
+        LastXRayDrawCalls = 0;
         LastRenderedInstances = 0;
         if (hd2d && cachedCamera == null) cachedCamera = Camera.main;
 
@@ -399,6 +435,16 @@ public partial class EnemySimulation
                 Graphics.DrawMeshInstanced(quad, 0, batch.material, chunkMats, n, mpb,
                     ShadowCastingMode.Off, false);
                 LastEnemyDrawCalls++;
+
+                // 同一批矩阵再画一遍 XRay pass：只在前景深度测试失败处出现剪影。
+                if (enemyXray && batch.xrayMaterial != null)
+                {
+                    batch.xrayMaterial.SetColor("_XRayColor", enemyXrayColor);
+                    Graphics.DrawMeshInstanced(quad, 0, batch.xrayMaterial, chunkMats, n, mpb,
+                        ShadowCastingMode.Off, false);
+                    LastXRayDrawCalls++;
+                }
+
                 drawn += n;
             }
         }

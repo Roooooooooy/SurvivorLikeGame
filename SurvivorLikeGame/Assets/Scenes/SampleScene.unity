@@ -1277,7 +1277,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2526705822991320777, guid: 047185c88b29c7b4faaa4d06768dfe95, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -96
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2526705822991320777, guid: 047185c88b29c7b4faaa4d06768dfe95, type: 3}
       propertyPath: m_LocalPosition.z
@@ -1410,7 +1410,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2526705822991320777, guid: 047185c88b29c7b4faaa4d06768dfe95, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 96
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2526705822991320777, guid: 047185c88b29c7b4faaa4d06768dfe95, type: 3}
       propertyPath: m_LocalPosition.z
@@ -1903,6 +1903,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemySimulation
   hd2dRendering: 1
+  enemyXray: 1
+  enemyXrayColor: {r: 1, g: 0.42, b: 0.12, a: 0.4}
   knockbackStrength: 4
   cellSize: 2
   tickDamageInterval: 0.3
@@ -2353,6 +2355,7 @@ MonoBehaviour:
   healthText: {fileID: 6812703}
   expBarFill: {fileID: 2032353601}
   levelText: {fileID: 56838991}
+  coinText: {fileID: 0}
 --- !u!1 &2005015710
 GameObject:
   m_ObjectHideFlags: 0
@@ -2362,44 +2365,14 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2005015712}
-  - component: {fileID: 2005015711}
+  - component: {fileID: 2005015713}
   m_Layer: 0
-  m_Name: HD2D_SpinePlayer
+  m_Name: HD2D_PixelPlayer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &2005015711
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2005015710}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 89adef6428d6e45938193a111449f1a2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Hd2dSpinePlayer
-  skeletonDataAsset: {fileID: 11400000, guid: f583e56506c294fc09bab3aeccbe920a, type: 2}
-  defaultSkin: custom
-  idleAnim: eyes blink
-  walkAnim: walk
-  runAnim: run
-  attackAnim: attack-str
-  hitAnim: hit
-  deathAnim: defeat
-  equipDemoGear: 1
-  viewScale: 1.25
-  worldYOffset: -0.35
-  invertFacing: 1
-  runSpeedThreshold: 6
-  attackCooldown: 0.8
-  hitCooldown: 0.45
-  xray: 1
-  xrayColor: {r: 0.42, g: 0.66, b: 1, a: 0.3}
-  groundShadow: 1
 --- !u!4 &2005015712
 Transform:
   m_ObjectHideFlags: 0
@@ -2415,6 +2388,49 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2005015713
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2005015710}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2453c7a06c2b54ea39747dec63e30cf2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Hd2dPixelPlayer
+  runningRoot: Player/Cat8Dir/Running
+  idleRoot: Player/Cat8Dir/Idle
+  frameCount: 8
+  frameWidth: 64
+  frameHeight: 64
+  pixelsPerUnit: 48
+  runFps: 10
+  idleFps: 5
+  moveThreshold: 0.05
+  runSpeedReference: 5
+  maxRunFps: 16
+  dust: 1
+  dustColor: {r: 0.85, g: 0.8, b: 0.7, a: 0.4}
+  dustSize: 0.45
+  dustRate: 24
+  turnDust: 1
+  turnDustCount: 3
+  stopDustCount: 5
+  turnDustCooldown: 0.12
+  viewScale: 1.6
+  worldYOffset: 0
+  startDirection: 6
+  groundShadow: 1
+  shadowDiameter: 0.85
+  shadowDepth: 0.5
+  shadowOpacity: 0.42
+  litAmbient: 0.85
+  xray: 1
+  xrayColor: {r: 0.35, g: 0.82, b: 1, a: 0.45}
+  tint: {r: 0.96, g: 0.98, b: 1, a: 1}
+  flashDuration: 0.12
 --- !u!1 &2029318233
 GameObject:
   m_ObjectHideFlags: 0
@@ -2873,7 +2889,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2526705822991320777, guid: 047185c88b29c7b4faaa4d06768dfe95, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -80
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2526705822991320777, guid: 047185c88b29c7b4faaa4d06768dfe95, type: 3}
       propertyPath: m_LocalPosition.z
@@ -3435,7 +3451,6 @@ PrefabInstance:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 963194228}
   - {fileID: 705507995}
   - {fileID: 282770539016943222}
   - {fileID: 1026073038}
@@ -3450,3 +3465,4 @@ SceneRoots:
   - {fileID: 1254719447}
   - {fileID: 501030527}
   - {fileID: 2005015712}
+  - {fileID: 963194228}

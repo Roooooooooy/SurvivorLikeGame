@@ -35,6 +35,8 @@ public class PlayerAnimation : MonoBehaviour
         if (player == null) player = FindFirstObjectByType<PlayerController>();
         if (player == null) return;
         if (player.GetComponent<PlayerAnimation>() != null) return;
+        // 8 方向像素主角接管时，不再挂旧的单表动画
+        if (Hd2dPixelPlayer.Active || FindFirstObjectByType<Hd2dPixelPlayer>() != null) return;
         player.gameObject.AddComponent<PlayerAnimation>();
     }
 
