@@ -2,11 +2,33 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // 场景固定 UI（标题 / HUD / 升级 / 死亡）的统一换肤。
-// 场景加载后自动执行一次，只改字体、颜色和 Sprite，不动 RectTransform。
+// 场景加载后自动执行，只改字体、颜色和 Sprite，不动 RectTransform。
 // 按精确路径查找，避免影响运行时动态创建的界面；场景重载后会重新应用。
 public static class SceneUISkin
 {
+    // 关闭 Domain Reload 时清掉上一次 Play 留下的静态订阅
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetHooks()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    // RuntimeInitializeOnLoadMethod 只在启动时执行一次；RestartGame 的 LoadScene
+    // 必须靠 sceneLoaded 重新应用，否则 HUD 会退回场景原始位置（血条跑到屏幕中间）。
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void Bootstrap()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+        Apply();
+    }
+
+    static void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene,
+        UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        Apply();
+    }
+
     static void Apply()
     {
         var canvas = GameObject.Find("Canvas");
@@ -37,11 +59,15 @@ public static class SceneUISkin
             driver.kills = kills != null ? kills.gameObject : null;
         }
 
-        // 标题
-        SkinText(Find(root, "TitleScreen/TitleText"), theme, true, theme.goldHi);
-        SkinText(Find(root, "TitleScreen/SubText"), theme, false, theme.muted);
-        AddTitleRules(Find(root, "TitleScreen"), Find(root, "TitleScreen/TitleText") as RectTransform,
-            86f, 560f, theme);
+        // 标题：v2 改版（大字号字标 + 竖排菜单）；场景缺节点时回退到旧的金线标题
+        var titleRoot = Find(root, "TitleScreen");
+        SkinText(Find(titleRoot, "TitleText"), theme, true, theme.goldHi);
+        SkinText(Find(titleRoot, "SubText"), theme, false, theme.muted);
+        if (!TitleScreenV2.Apply(titleRoot, theme))
+        {
+            AddTitleRules(titleRoot, Find(titleRoot, "TitleText") as RectTransform,
+                86f, 560f, theme);
+        }
 
         // HUD 文字
         SkinText(Find(root, "HUD/bg/HpText"), theme, false, theme.parchment);

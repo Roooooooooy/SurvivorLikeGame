@@ -25,6 +25,10 @@
 - **Kenney — Fantasy UI Borders**（CC0）
   https://kenney.nl/assets/fantasy-ui-borders
   装饰边框；部分 PNG 已导入
+  `Assets/Resources/TitleUI/frame_double.png`、`divider_fade.png` 取自该包（标题页菜单底板与分隔线）
+- **Kenney — Particle Pack**（CC0）
+  https://kenney.nl/assets/particle-pack
+  标题页动态背景使用 `glow_soft.png` / `ember_star.png` / `smoke_wide.png` / `smoke_wisp.png`
 
 ## 中文 UI 字体
 - **Noto Serif SC**（SIL Open Font License 1.1）

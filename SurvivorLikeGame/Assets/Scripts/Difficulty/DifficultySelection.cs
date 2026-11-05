@@ -86,8 +86,16 @@ public static class DifficultySelection
             if (data == null || string.IsNullOrEmpty(data.id)) continue;
             list.Add(data);
         }
-        // 按 id 字典序排序，保证 Resources.LoadAll 的返回顺序变化不影响显示顺序
-        list.Sort((a, b) => string.CompareOrdinal(a.id, b.id));
+        // 按“难度”从易到难排序：先比敌人血量倍率，再比金币收益，最后用 id 兜底。
+        // 这样列表固定是 普通 → 困难 → 噩梦，Resources.LoadAll 的返回顺序不影响显示。
+        list.Sort((a, b) =>
+        {
+            int c = a.enemyHealthMultiplier.CompareTo(b.enemyHealthMultiplier);
+            if (c != 0) return c;
+            c = a.coinMultiplier.CompareTo(b.coinMultiplier);
+            if (c != 0) return c;
+            return string.CompareOrdinal(a.id, b.id);
+        });
         all = list.ToArray();
     }
 }

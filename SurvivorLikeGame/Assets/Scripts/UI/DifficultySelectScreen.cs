@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 // 难度选择界面：运行时自建 Canvas（ScreenSpaceOverlay，sortingOrder 320），
@@ -18,9 +20,9 @@ public class DifficultySelectScreen : MonoBehaviour
     private const float HeaderHeight = 130f;
     private const float FooterHeight = 90f;
     private const float RowWidth = 960f;
-    private const float DesiredRowHeight = 160f;
-    private const float MinRowHeight = 104f;
-    private const float ActionButtonX = 360f;          // 操作按钮横向位置：行右侧留 30px 内边距
+    private const float CollapsedRowHeight = 84f;      // 未选中：只显示图标 / 名称 / 基础信息
+    private const float ExpandedRowHeight = 200f;      // 选中：展开描述与操作按钮
+    private const float RowGap = 8f;
 
     private static DifficultySelectScreen instance;
 
@@ -31,6 +33,8 @@ public class DifficultySelectScreen : MonoBehaviour
     private sealed class DifficultyRow
     {
         public DifficultyData data;
+        public int index;
+        public RectTransform rect;
         public Image background;
         public Image accent;
         public Text nameText;
@@ -39,6 +43,10 @@ public class DifficultySelectScreen : MonoBehaviour
         public Text statusText;
         public Button actionButton;
         public Text actionLabel;
+        public CanvasGroup detailGroup;
+        public float currentHeight;
+        public float currentY;
+        public float detailAlpha;
     }
 
     private readonly List<DifficultyRow> rows = new List<DifficultyRow>();
@@ -46,6 +54,12 @@ public class DifficultySelectScreen : MonoBehaviour
     private Text coinsText;
     private Text messageText;
     private bool built;
+
+    // 键盘/鼠标当前聚焦的行（可以是被锁定的难度，用于查看）
+    private int focusedIndex;
+    private float collapsedHeight = CollapsedRowHeight;
+    private float expandedHeight = ExpandedRowHeight;
+    private float rowTopY;
 
     // 关闭域重载时静态字段会跨 Play 保留，这里回到初始状态，避免下次进入 Play 时残留 IsOpen=true
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -71,6 +85,9 @@ public class DifficultySelectScreen : MonoBehaviour
     {
         IsOpen = false;
         if (instance != null) instance.gameObject.SetActive(false);
+
+        // 关闭难度界面后，背景恢复成标题菜单「选择难度」的配色
+        if (TitleBackdrop.Instance != null) TitleBackdrop.Instance.ClearDifficultyTint();
     }
 
     public static void Toggle()
@@ -101,8 +118,83 @@ public class DifficultySelectScreen : MonoBehaviour
         CharacterSelectScreen.Hide();
         if (messageText != null) messageText.text = string.Empty; // 每次打开清掉上一次的解锁提示
         gameObject.SetActive(true);
+
+        // 每次打开都从“当前已选难度”开始聚焦
+        focusedIndex = FindSelectedIndex();
         Refresh();
         IsOpen = true;
+    }
+
+    private void Update()
+    {
+        if (!IsOpen || !built) return;
+
+        HandleInput();
+        LayoutRows(Time.unscaledDeltaTime, false);
+    }
+
+    // 上下键切换聚焦行（锁定的难度也可以查看，只是不能设置）
+    private void HandleInput()
+    {
+        var kb = Keyboard.current;
+        if (kb != null)
+        {
+            if (kb.downArrowKey.wasPressedThisFrame || kb.sKey.wasPressedThisFrame) MoveFocus(1);
+            else if (kb.upArrowKey.wasPressedThisFrame || kb.wKey.wasPressedThisFrame) MoveFocus(-1);
+            else if (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) ConfirmFocused();
+        }
+
+        var gp = Gamepad.current;
+        if (gp != null)
+        {
+            if (gp.dpad.down.wasPressedThisFrame) MoveFocus(1);
+            else if (gp.dpad.up.wasPressedThisFrame) MoveFocus(-1);
+            else if (gp.buttonSouth.wasPressedThisFrame) ConfirmFocused();
+        }
+    }
+
+    private void MoveFocus(int delta)
+    {
+        if (rows.Count == 0) return;
+        SetFocus(Mathf.Clamp(focusedIndex + delta, 0, rows.Count - 1));
+    }
+
+    private void SetFocus(int index)
+    {
+        if (rows.Count == 0) return;
+        index = Mathf.Clamp(index, 0, rows.Count - 1);
+        if (index == focusedIndex) return;
+
+        focusedIndex = index;
+        Refresh();
+    }
+
+    // Enter / 手柄 A：只对已解锁难度生效；锁定难度保持展开预览，不写入选择
+    private void ConfirmFocused()
+    {
+        if (focusedIndex < 0 || focusedIndex >= rows.Count) return;
+
+        var row = rows[focusedIndex];
+        if (row == null || row.data == null) return;
+
+        if (!IsUnlocked(row.data))
+        {
+            ShowMessage("该难度尚未解锁", false);
+            return;
+        }
+
+        DifficultySelection.Select(row.data.id);
+        Refresh();
+    }
+
+    private int FindSelectedIndex()
+    {
+        string selectedId = CurrentSelectedId();
+        for (int i = 0; i < rows.Count; i++)
+        {
+            if (rows[i].data != null && rows[i].data.id == selectedId) return i;
+        }
+        return 0;
     }
 
     private void OnDestroy()
@@ -156,19 +248,34 @@ public class DifficultySelectScreen : MonoBehaviour
         Color muted = theme != null ? theme.muted : new Color(0.56f, 0.55f, 0.50f, 1f);
         Color borderColor = theme != null ? theme.WithAlpha(theme.gold, 0.65f) : new Color(0.30f, 0.25f, 0.20f, 0.92f);
 
-        // 读取难度数据并按行数计算面板高度：条目多时自动压缩行高，避免溢出屏幕
+        // 读取难度数据：面板高度按“一行展开 + 其余收起”的最大占位计算
         LoadDifficulties();
         int rowCount = difficulties.Length;
-        float rowHeight = DesiredRowHeight;
-        float needed = HeaderHeight + FooterHeight + rowCount * rowHeight;
-        if (needed > MaxPanelHeight)
-            rowHeight = Mathf.Max(MinRowHeight, (MaxPanelHeight - HeaderHeight - FooterHeight) / Mathf.Max(1, rowCount));
-        float panelHeight = Mathf.Clamp(HeaderHeight + FooterHeight + rowCount * rowHeight, 400f, MaxPanelHeight);
+        collapsedHeight = CollapsedRowHeight;
+        expandedHeight = ExpandedRowHeight;
+
+        float rowsHeight = rowCount > 0
+            ? collapsedHeight * Mathf.Max(0, rowCount - 1) + expandedHeight + RowGap * Mathf.Max(0, rowCount - 1)
+            : 240f;
+        float totalHeight = HeaderHeight + FooterHeight + rowsHeight + 16f;
+        if (totalHeight > MaxPanelHeight)
+        {
+            float available = MaxPanelHeight - HeaderHeight - FooterHeight - 16f
+                              - RowGap * Mathf.Max(0, rowCount - 1);
+            float baseSum = collapsedHeight * Mathf.Max(0, rowCount - 1) + expandedHeight;
+            float k = available / Mathf.Max(1f, baseSum);
+            collapsedHeight *= k;
+            expandedHeight *= k;
+            totalHeight = MaxPanelHeight;
+        }
+
+        float panelHeight = Mathf.Max(400f, totalHeight);
         float halfHeight = panelHeight * 0.5f;
         float halfWidth = PanelWidth * 0.5f;
+        rowTopY = halfHeight - HeaderHeight;
 
-        // 全屏深色遮罩：盖住标题页，同时吞掉鼠标点击
-        var scrim = UIFactory.CreateImage(transform, "Scrim", null, new Color(0f, 0f, 0f, 0.78f),
+        // 全屏遮罩：压暗得比较轻，让雨雷背景能透出来；仍然吞掉鼠标点击
+        var scrim = UIFactory.CreateImage(transform, "Scrim", null, new Color(0f, 0f, 0f, 0.38f),
             false, true);
         UIFactory.Stretch(scrim.rectTransform);
 
@@ -200,10 +307,12 @@ public class DifficultySelectScreen : MonoBehaviour
             false, false);
         SetCentered(divider.rectTransform, PanelWidth - 80f, 2f, new Vector2(0f, halfHeight - 100f));
 
-        // 难度行：从分隔线下方开始逐行排列
-        float firstRowY = halfHeight - HeaderHeight - rowHeight * 0.5f;
+        // 难度行：高度/位置由 LayoutRows 统一驱动，展开时把下面各行挤开
         for (int i = 0; i < rowCount; i++)
-            CreateRow(panel.transform, difficulties[i], i, firstRowY - i * rowHeight, rowHeight);
+            CreateRow(panel.transform, difficulties[i], i);
+
+        focusedIndex = FindSelectedIndex();
+        LayoutRows(0f, true);
 
         // 空状态：A 的难度数据尚未就绪时给出明确提示，不崩、不留白板
         var emptyTitle = UIFactory.CreateText(panel.transform, "Empty", "暂无可用难度", 30,
@@ -217,10 +326,11 @@ public class DifficultySelectScreen : MonoBehaviour
         emptyHint.gameObject.SetActive(rowCount == 0);
 
         // 底部：左侧固定操作提示，右侧显示解锁结果
-        var keyHint = UIFactory.CreateText(panel.transform, "KeyHint", "D / ESC 关闭", 22,
+        var keyHint = UIFactory.CreateText(panel.transform, "KeyHint",
+            "上下选择      ENTER 确认      D / ESC 关闭", 22,
             muted, TextAnchor.MiddleLeft, false, FontStyle.Normal);
-        SetCentered(keyHint.rectTransform, 420f, 40f,
-            new Vector2(-halfWidth + 40f + 210f, -halfHeight + 38f));
+        SetCentered(keyHint.rectTransform, 520f, 40f,
+            new Vector2(-halfWidth + 40f + 260f, -halfHeight + 38f));
 
         messageText = UIFactory.CreateText(panel.transform, "Message", string.Empty, 22,
             parchment, TextAnchor.MiddleRight, false, FontStyle.Bold);
@@ -241,72 +351,177 @@ public class DifficultySelectScreen : MonoBehaviour
         difficulties = list.ToArray();
     }
 
-    private void CreateRow(Transform parent, DifficultyData data, int index, float y, float rowHeight)
+    private void CreateRow(Transform parent, DifficultyData data, int index)
     {
         var theme = UITheme.Current;
-        float height = Mathf.Max(64f, rowHeight - 8f);
         Color parchment = theme != null ? theme.parchment : new Color(0.85f, 0.82f, 0.76f, 1f);
         Color muted = theme != null ? theme.muted : new Color(0.56f, 0.55f, 0.50f, 1f);
         Color teal = theme != null ? theme.teal : new Color(0.37f, 0.56f, 0.54f, 1f);
 
-        // 交替底色，便于区分相邻行；选中态在 Refresh 里覆盖
+        // 行底可接收鼠标：进入或点击任意一行都会把焦点切到该行并展开
         var bg = UIFactory.CreateImage(parent, "Row_" + (data != null ? data.id : index.ToString()),
             null,
             index % 2 == 0
                 ? (theme != null ? theme.panel2 : new Color(0.08f, 0.11f, 0.15f, 1f))
                 : (theme != null ? theme.panel : new Color(0.06f, 0.08f, 0.11f, 1f)),
-            false, false);
-        SetCentered(bg.rectTransform, RowWidth, height, new Vector2(0f, y));
+            false, true);
 
-        var row = new DifficultyRow { data = data, background = bg };
+        var bgRt = bg.rectTransform;
+        bgRt.anchorMin = bgRt.anchorMax = new Vector2(0.5f, 0.5f);
+        bgRt.pivot = new Vector2(0.5f, 0.5f);
+        bgRt.sizeDelta = new Vector2(RowWidth, collapsedHeight);
+        bgRt.anchoredPosition = Vector2.zero;
 
-        // 左侧难度图标
+        var row = new DifficultyRow
+        {
+            data = data,
+            index = index,
+            rect = bgRt,
+            background = bg,
+            currentHeight = collapsedHeight,
+            detailAlpha = 0f,
+        };
+
+        var hover = bg.gameObject.AddComponent<EventTrigger>();
+        var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+        enter.callback.AddListener(_ => SetFocus(index));
+        hover.triggers.Add(enter);
+        var click = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
+        click.callback.AddListener(_ => SetFocus(index));
+        hover.triggers.Add(click);
+
+        // 左侧难度图标：固定贴住行的顶部，展开时与名称保持同一水平线
         CardRow.AddIconChip(bg.transform, RowIcon.ForDifficulty(data), -RowWidth * 0.5f + 56f, 72f);
+        AnchorIconChipToTop(bg.transform, 56f, -44f);
 
-        // 左侧竖条：选中时变亮金色，作为高亮的第二条视觉线索
+        // 左侧竖条：聚焦时变亮金色
         row.accent = UIFactory.CreateImage(bg.transform, "Accent", null,
             theme != null ? theme.line : new Color(0.15f, 0.19f, 0.24f, 1f), false, false);
-        SetCentered(row.accent.rectTransform, 6f, height, new Vector2(-RowWidth * 0.5f + 3f, 0f));
+        SetCentered(row.accent.rectTransform, 4f, collapsedHeight,
+            new Vector2(-RowWidth * 0.5f + 3f, 0f));
 
-        // 名字（左上）
+        // 名称（左上，收起态也显示）
         row.nameText = UIFactory.CreateText(bg.transform, "Name", DisplayName(data), 28,
             parchment, TextAnchor.MiddleLeft, false, FontStyle.Bold);
-        SetCentered(row.nameText.rectTransform, 380f, 38f, new Vector2(-160f, height * 0.5f - 30f));
+        AnchorTopLeft(row.nameText.rectTransform, 110f, -14f, 420f, 36f);
 
-        // 描述（中左）：最多两行，超出截断
-        row.descText = UIFactory.CreateText(bg.transform, "Desc",
+        // 基础信息（左上、名称下方，收起态也显示）
+        row.infoText = UIFactory.CreateText(bg.transform, "Multipliers", MultiplierLine(data),
+            15, teal, TextAnchor.MiddleLeft, false, FontStyle.Normal);
+        AnchorTopLeft(row.infoText.rectTransform, 110f, -54f, 560f, 28f);
+
+        // 状态（右上，收起态也显示：价格 / 已解锁 / 当前难度）
+        row.statusText = UIFactory.CreateText(bg.transform, "Status", string.Empty, 18,
+            parchment, TextAnchor.MiddleRight, false, FontStyle.Bold);
+        AnchorTopRight(row.statusText.rectTransform, -24f, -14f, 300f, 34f);
+
+        // ---------- 展开后才出现的详情区 ----------
+        var detailGo = new GameObject("Detail", typeof(RectTransform), typeof(CanvasGroup));
+        var detailRt = detailGo.GetComponent<RectTransform>();
+        detailRt.SetParent(bg.transform, false);
+        detailRt.anchorMin = Vector2.zero;
+        detailRt.anchorMax = Vector2.one;
+        detailRt.offsetMin = Vector2.zero;
+        detailRt.offsetMax = Vector2.zero;
+
+        row.detailGroup = detailGo.GetComponent<CanvasGroup>();
+        row.detailGroup.alpha = 0f;
+        row.detailGroup.blocksRaycasts = false;
+        row.detailGroup.interactable = false;
+
+        // 描述（左上，基础信息下方，最多两行）
+        row.descText = UIFactory.CreateText(detailGo.transform, "Desc",
             data != null && !string.IsNullOrEmpty(data.description) ? data.description : "—",
             15, muted, TextAnchor.MiddleLeft, false, FontStyle.Normal);
-        SetCentered(row.descText.rectTransform, 400f, 40f, new Vector2(-160f, 6f));
+        AnchorTopLeft(row.descText.rectTransform, 110f, -88f, 560f, 44f);
         row.descText.horizontalOverflow = HorizontalWrapMode.Wrap;
         row.descText.verticalOverflow = VerticalWrapMode.Truncate;
 
-        // 倍率（左下）：敌人 HP / 伤害 / 速度 / 金币，单行展示；语义色 teal
-        row.infoText = UIFactory.CreateText(bg.transform, "Multipliers", MultiplierLine(data),
-            15, teal, TextAnchor.MiddleLeft, false, FontStyle.Normal);
-        SetCentered(row.infoText.rectTransform, 440f, 32f,
-            new Vector2(-160f, -height * 0.5f + 22f));
-
-        // 状态（右上）：未解锁显示价格，已解锁显示当前状态
-        row.statusText = UIFactory.CreateText(bg.transform, "Status", string.Empty, 18,
-            parchment, TextAnchor.MiddleCenter, false, FontStyle.Bold);
-        SetCentered(row.statusText.rectTransform, 260f, 34f,
-            new Vector2(265f, height * 0.5f - 30f));
-
         // 操作按钮（右下）：UNLOCK / SELECT / 已选择
-        row.actionButton = CreateActionButton(bg.transform,
-            new Vector2(ActionButtonX, -height * 0.5f + 38f), out row.actionLabel);
+        row.actionButton = CreateActionButton(detailGo.transform, new Vector2(-24f, 20f),
+            out row.actionLabel);
         var captured = row;
         row.actionButton.onClick.AddListener(() => OnActionClicked(captured));
 
         rows.Add(row);
     }
 
+    // CardRow 生成的图标底座默认按行中心定位；这里改成贴住行的左上角
+    private static void AnchorIconChipToTop(Transform row, float leftX, float topY)
+    {
+        string[] names = { "__IconChip", "__IconChipBorder", "__Icon" };
+        for (int i = 0; i < names.Length; i++)
+        {
+            var rt = row.Find(names[i]) as RectTransform;
+            if (rt == null) continue;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = new Vector2(leftX, topY);
+        }
+    }
+
+    private static void AnchorTopLeft(RectTransform rt, float x, float y, float width, float height)
+    {
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = new Vector2(x, y);
+        rt.sizeDelta = new Vector2(width, height);
+    }
+
+    private static void AnchorTopRight(RectTransform rt, float x, float y, float width, float height)
+    {
+        rt.anchorMin = rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(1f, 1f);
+        rt.anchoredPosition = new Vector2(x, y);
+        rt.sizeDelta = new Vector2(width, height);
+    }
+
+    // 行高/行位置动画：聚焦行展开，其余收起，下面的行被逐渐挤开
+    private void LayoutRows(float dt, bool immediate)
+    {
+        float t = immediate ? 1f : 1f - Mathf.Exp(-11f * dt);
+        float cursor = rowTopY;
+
+        for (int i = 0; i < rows.Count; i++)
+        {
+            var row = rows[i];
+            float targetHeight = i == focusedIndex ? expandedHeight : collapsedHeight;
+            float targetY = cursor - targetHeight * 0.5f;
+
+            row.currentHeight = immediate ? targetHeight : Mathf.Lerp(row.currentHeight, targetHeight, t);
+            row.currentY = immediate ? targetY : Mathf.Lerp(row.currentY, targetY, t);
+
+            row.rect.sizeDelta = new Vector2(RowWidth, row.currentHeight);
+            row.rect.anchoredPosition = new Vector2(0f, row.currentY);
+
+            if (row.accent != null)
+                row.accent.rectTransform.sizeDelta = new Vector2(4f, Mathf.Max(20f, row.currentHeight - 14f));
+
+            float targetAlpha = i == focusedIndex ? 1f : 0f;
+            row.detailAlpha = immediate ? targetAlpha : Mathf.Lerp(row.detailAlpha, targetAlpha, t);
+            if (row.detailGroup != null)
+            {
+                row.detailGroup.alpha = row.detailAlpha;
+                bool interactive = row.detailAlpha > 0.85f;
+                row.detailGroup.blocksRaycasts = interactive;
+                row.detailGroup.interactable = interactive;
+            }
+
+            cursor -= targetHeight + RowGap;
+        }
+    }
+
     private Button CreateActionButton(Transform parent, Vector2 anchoredPos, out Text label)
     {
         var button = UIFactory.CreateButton(parent, "ActionButton", "SELECT",
             new Vector2(180f, 54f), null);
-        SetCentered(button.GetComponent<RectTransform>(), 180f, 54f, anchoredPos);
+
+        var rt = button.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(1f, 0f);
+        rt.pivot = new Vector2(1f, 0f);
+        rt.anchoredPosition = anchoredPos;
+        rt.sizeDelta = new Vector2(180f, 54f);
+
         StyleButton(button);
 
         label = button.transform.Find("Label").GetComponent<Text>();
@@ -371,20 +586,21 @@ public class DifficultySelectScreen : MonoBehaviour
             bool unlocked = IsUnlocked(row.data);
             int cost = Mathf.Max(0, row.data.unlockCost);
             bool affordable = coins >= cost;
-            // 只有已解锁的难度才可能被选中，避免 A 的兜底 Selected 指向锁定项时误高亮
-            bool isSelected = unlocked && !string.IsNullOrEmpty(selectedId) && row.data.id == selectedId;
+            bool isFocused = i == focusedIndex;
+            // 当前实际生效的难度（与“聚焦查看”区分开）
+            bool isActive = unlocked && !string.IsNullOrEmpty(selectedId) && row.data.id == selectedId;
 
-            // 选中卡片：金色基调 + 金色左侧竖条 + 金色名字
-            row.background.color = isSelected
+            // 展开/聚焦的行：金色基调 + 金色左侧竖条 + 金色名字
+            row.background.color = isFocused
                 ? Color.Lerp(panel2, gold, 0.28f)
                 : (i % 2 == 0 ? panel2 : panel);
-            row.accent.color = isSelected
+            row.accent.color = isFocused
                 ? gold
                 : (theme != null ? theme.line : new Color(0.15f, 0.19f, 0.24f, 1f));
-            row.nameText.color = isSelected ? goldHi : parchment;
-            // 选中行的暖金底色会压低对比度，正文提到 parchment/tealHi
-            row.descText.color = isSelected ? parchment : muted;
-            row.infoText.color = isSelected ? tealHi : teal;
+            row.nameText.color = isFocused ? goldHi : parchment;
+            // 聚焦行的暖金底色会压低对比度，正文提到 parchment/tealHi
+            row.descText.color = isFocused ? parchment : muted;
+            row.infoText.color = isFocused ? tealHi : teal;
 
             // 已选中时按钮不可点，用暖金色代替灰掉，视觉上表示「当前选择」
             var buttonColors = row.actionButton.colors;
@@ -403,15 +619,59 @@ public class DifficultySelectScreen : MonoBehaviour
             }
             else
             {
-                row.statusText.text = isSelected ? "当前难度" : "已解锁";
+                row.statusText.text = isActive ? "当前难度" : "已解锁";
                 ApplyFont(row.statusText);
-                row.statusText.color = isSelected ? gold : muted;
-                row.actionLabel.text = isSelected ? "已选择" : "SELECT";
+                row.statusText.color = isActive ? gold : muted;
+                row.actionLabel.text = isActive ? "已选择" : "SELECT";
                 ApplyFont(row.actionLabel);
-                row.actionLabel.color = isSelected ? goldHi : parchment;
-                row.actionButton.interactable = !isSelected;
+                row.actionLabel.color = isActive ? goldHi : parchment;
+                row.actionButton.interactable = !isActive;
             }
         }
+
+        // 背景颜色跟随“聚焦查看”的难度，而不是实际选择的难度（锁定项也能预览）
+        if (focusedIndex >= 0 && focusedIndex < rows.Count)
+            ApplyBackdropTint(rows[focusedIndex].data);
+    }
+
+    // 难度 → 标题页雨雷背景的配色与强度。
+    // 普通=青蓝小雨；困难=暖金雷雨；噩梦=深红暴雨，雨量/雷频/闪光逐级增强。
+    private static void ApplyBackdropTint(DifficultyData data)
+    {
+        if (data == null || TitleBackdrop.Instance == null) return;
+
+        var theme = UITheme.Current;
+        if (theme == null) return;
+
+        Color primary;
+        Color secondary;
+        Color accent;
+        float severity;
+        switch (data.id)
+        {
+            case "normal":
+                primary = theme.tealHi;
+                secondary = theme.teal;
+                accent = theme.goldHi;
+                severity = 0.45f;
+                break;
+            case "hard":
+                primary = theme.gold;
+                secondary = theme.bloodHi;
+                accent = theme.goldHi;
+                severity = 0.75f;
+                break;
+            case "nightmare":
+                primary = theme.bloodHi;
+                secondary = Color.Lerp(theme.blood, Color.black, 0.25f);
+                accent = Color.Lerp(theme.goldHi, theme.bloodHi, 0.35f);
+                severity = 1f;
+                break;
+            default:
+                return;
+        }
+
+        TitleBackdrop.Instance.SetDifficultyTint(primary, secondary, accent, severity);
     }
 
     private void OnActionClicked(DifficultyRow row)
