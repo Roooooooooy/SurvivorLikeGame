@@ -6,7 +6,9 @@ using UnityEngine.Rendering;
 // - 逻辑/碰撞仍在 PlayerController 的 XY 平面
 // - 视觉根节点映射到世界 (x, 0, y)，面向相机（billboard）
 // - 每个方向 8 帧横向精灵表，跑步/待机切换
-// - 待机缺失方向用北/南占位（北：NE/NW，南：E/W/SE/SW）
+// - 朝向只在移动时更新；停下后保持最后一次奔跑方向，播放同方向的待机
+// - 90° 换向先经过中间方向（如 W→S 经过 SW），斜向退化成相邻正方向时有短暂防抖
+// - 待机（按美术方向）：N/S/SE/SW 为专属图；E/W 暂用相邻斜向图（E→SE、W→SW）；NE/NW 仍为 north 占位
 [DisallowMultipleComponent]
 public class Hd2dPixelPlayer : MonoBehaviour
 {
@@ -28,6 +30,12 @@ public class Hd2dPixelPlayer : MonoBehaviour
     [Tooltip("跑步动画按这个移速对应 runFps；实际帧率会随移速缩放")]
     public float runSpeedReference = 5f;
     public float maxRunFps = 16f;
+
+    [Header("朝向过渡")]
+    [Tooltip("90° 换向时先经过中间方向的时长（如 W→S 经过 SW）；0 表示关闭过渡")]
+    public float diagonalTransitionDuration = 0.1f;
+    [Tooltip("斜向退化成相邻正方向时，需要持续这么久才提交切换；用于吃掉斜向松键有先后造成的抖动")]
+    public float diagonalReleaseDelay = 0.1f;
 
     [Header("脚步尘土")]
     public bool dust = true;
@@ -82,6 +90,10 @@ public class Hd2dPixelPlayer : MonoBehaviour
     Shader xrayShader;
 
     int dir;
+    int pendingDir = -1;
+    float pendingDirTimer;
+    int transitionTargetDir = -1;
+    float transitionTimer;
     int frame;
     float timer;
     bool running;
@@ -237,23 +249,9 @@ public class Hd2dPixelPlayer : MonoBehaviour
 
         if (turnDustTimer > 0f) turnDustTimer -= Time.deltaTime;
 
-        if (moving)
-        {
-            float angle = Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg;
-            if (angle < 0f) angle += 360f;
-            int newDir = Mathf.RoundToInt(angle / 45f) % 8;
-            if (newDir != dir)
-            {
-                dir = newDir;
-                frame = 0;
-                timer = 0f;
-                if (turnDust && dustFx != null && turnDustTimer <= 0f)
-                {
-                    dustFx.Burst(transform.position + Vector3.up * 0.06f, turnDustCount, 1.1f);
-                    turnDustTimer = turnDustCooldown;
-                }
-            }
-        }
+        // 只在移动时更新朝向。松开方向键后 velocity 归零，
+        // dir 保留最后一次奔跑方向，停下后待机就播放同方向的 idle。
+        if (moving) UpdateFacingDirection(v);
 
         if (moving != running)
         {
@@ -262,6 +260,19 @@ public class Hd2dPixelPlayer : MonoBehaviour
             running = moving;
             frame = 0;
             timer = 0f;
+            // 停下时丢弃尚未确认的候选方向，保留最后确认的朝向作为待机方向。
+            pendingDir = -1;
+            pendingDirTimer = 0f;
+
+            // 仅在停下时结算：若停在 90° 过渡中途，直接落到实际移动方向，
+            // 保证待机与最后移动一致。开始移动的那一帧不能结算，否则会跳过中间方向。
+            if (!moving && transitionTimer > 0f)
+            {
+                int target = transitionTargetDir;
+                transitionTimer = 0f;
+                transitionTargetDir = -1;
+                CommitDirection(target);
+            }
         }
 
         var frames = CurrentFrames();
@@ -281,6 +292,106 @@ public class Hd2dPixelPlayer : MonoBehaviour
             dustFx.SetEmitting(running, transform.position + Vector3.up * 0.06f);
 
         ApplyFrame(false);
+    }
+
+    // 移动中更新朝向。规则：
+    // 1) 90° 换向先经过中间方向（W→S 经过 SW），播一小段时间再落到目标，转身更自然；
+    // 2) 斜向退化成相邻正方向可能只是松键先后造成的抖动，挂起一小段时间再提交；
+    // 3) 其余切换立即提交。
+    void UpdateFacingDirection(Vector2 v)
+    {
+        float angle = Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg;
+        if (angle < 0f) angle += 360f;
+        int newDir = Mathf.RoundToInt(angle / 45f) % 8;
+
+        // 正在播放中间方向的过渡：输入仍指向目标就一直播到结束。
+        if (transitionTimer > 0f)
+        {
+            if (newDir != transitionTargetDir)
+            {
+                // 玩家又换了方向，放弃这次过渡，按新方向重新判断。
+                transitionTimer = 0f;
+                transitionTargetDir = -1;
+            }
+            else
+            {
+                transitionTimer -= Time.deltaTime;
+                if (transitionTimer > 0f) return;
+                int target = transitionTargetDir;
+                transitionTargetDir = -1;
+                CommitDirection(target);
+                return;
+            }
+        }
+
+        if (newDir == dir)
+        {
+            pendingDir = -1;
+            pendingDirTimer = 0f;
+            return;
+        }
+
+        // 90° 换向：先经过中间方向，再落到目标。
+        if (diagonalTransitionDuration > 0f && IsQuarterTurn(dir, newDir))
+        {
+            transitionTargetDir = newDir;
+            transitionTimer = diagonalTransitionDuration;
+            CommitDirection(MidDirection(dir, newDir));
+            return;
+        }
+
+        if (IsDiagonalRelax(dir, newDir))
+        {
+            // 短暂单轴输入：先挂起候选方向，持续够久仍没变回斜向才真正切换。
+            if (newDir != pendingDir)
+            {
+                pendingDir = newDir;
+                pendingDirTimer = 0f;
+            }
+            pendingDirTimer += Time.deltaTime;
+            if (pendingDirTimer >= diagonalReleaseDelay)
+                CommitDirection(newDir);
+            return;
+        }
+
+        CommitDirection(newDir);
+    }
+
+    // 方向索引相差 2 或 6，表示转了 90°。
+    static bool IsQuarterTurn(int from, int to)
+    {
+        int delta = (to - from + 8) % 8;
+        return delta == 2 || delta == 6;
+    }
+
+    // 取 from → to 的 90° 弧上的中间方向（45°）。
+    static int MidDirection(int from, int to)
+    {
+        int delta = (to - from + 8) % 8;
+        return (from + (delta <= 4 ? 1 : 7)) % 8;
+    }
+
+    // 世界方向索引里奇数是斜向（1=NE、3=NW、5=SW、7=SE），偶数是正方向。
+    // 只有“斜向退化成自己相邻的正方向”才可能只是松键先后造成的抖动。
+    static bool IsDiagonalRelax(int from, int to)
+    {
+        if ((from & 1) == 0) return false;
+        if ((to & 1) != 0) return false;
+        return to == (from + 7) % 8 || to == (from + 1) % 8;
+    }
+
+    void CommitDirection(int newDir)
+    {
+        dir = newDir;
+        pendingDir = -1;
+        pendingDirTimer = 0f;
+        frame = 0;
+        timer = 0f;
+        if (turnDust && dustFx != null && turnDustTimer <= 0f)
+        {
+            dustFx.Burst(transform.position + Vector3.up * 0.06f, turnDustCount, 1.1f);
+            turnDustTimer = turnDustCooldown;
+        }
     }
 
     Sprite[] CurrentFrames()
@@ -338,7 +449,8 @@ public class Hd2dPixelPlayer : MonoBehaviour
             idleFrames[i] = LoadSheet($"{idleRoot}/idle_{DirNames[i]}");
         }
 
-        // 待机占位：北 -> NE/NW；南 -> E/W/SE/SW
+        // 文件缺失时的兜底：北 -> NE/NW；南 -> E/W。
+        // 当前 8 个文件都存在（E/W 用 SE/SW 图临时填充），正常不会走到这里。
         for (int i = 0; i < 8; i++)
         {
             if (idleFrames[i] != null) continue;

@@ -104,7 +104,7 @@ public class SettlementScreen : MonoBehaviour
         Color borderColor = theme != null ? theme.WithAlpha(theme.gold, 0.65f) : new Color(0.30f, 0.25f, 0.20f, 0.92f);
 
         // 全屏深色遮罩：同时挡住后面死亡面板上的旧重开按钮
-        var scrim = UIFactory.CreateImage(transform, "Scrim", null, new Color(0f, 0f, 0f, 0.72f),
+        var scrim = UIFactory.CreateImage(transform, "Scrim", null, new Color(0f, 0f, 0f, 0.55f),
             false, true);
         UIFactory.Stretch(scrim.rectTransform);
 

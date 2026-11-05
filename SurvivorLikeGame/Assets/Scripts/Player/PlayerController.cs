@@ -52,7 +52,13 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        if (GameManager.Instance != null && GameManager.Instance.isGameOver) return;
+        if (GameManager.Instance != null && GameManager.Instance.isGameOver)
+        {
+            // 死亡演出的黑魂式规则：时间不暂停，但主角不再受控。
+            // 必须清掉速度，否则 Rigidbody2D 会保留死亡瞬间的惯性一直滑行。
+            if (rb != null) rb.linearVelocity = Vector2.zero;
+            return;
+        }
 
         HandleMovement();
 
@@ -121,6 +127,8 @@ public class PlayerController : MonoBehaviour
 
     void Die()
     {
+        // 立即刹停，避免死亡瞬间到下一帧 Update 之间还带着速度
+        if (rb != null) rb.linearVelocity = Vector2.zero;
         if (GameManager.Instance) GameManager.Instance.GameOver();
     }
 
