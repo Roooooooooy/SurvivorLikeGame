@@ -19,7 +19,7 @@ public static class SfxGenerator
 
     // ---------------- 生成入口 ----------------
 
-    [MenuItem("Tools/Survivor/Generate W3 Placeholder SFX")]
+    [MenuItem("工具/幸存者/生成 W3 占位音效")]
     public static void GenerateAll()
     {
         Directory.CreateDirectory(OutputDir);
@@ -145,7 +145,7 @@ public static class SfxGenerator
 
     private static int verifyDelayFrames;
 
-    [MenuItem("Tools/Survivor/Verify W3 Audio (Play Mode)")]
+    [MenuItem("工具/幸存者/校验 W3 音频（Play 模式）")]
     public static void VerifyInPlayMode()
     {
         if (!Application.isPlaying)

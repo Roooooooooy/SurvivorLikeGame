@@ -20,7 +20,7 @@ public static class SampleSceneHd2dSetup
     const string TuningPath = "Assets/Settings/HD2D_GameTuning.asset";
     const string PropLibraryPath = "Assets/Resources/HD2D/PropLibrary.asset";
 
-    [MenuItem("Tools/HD2D/7. Migrate SampleScene to HD-2D")]
+    [MenuItem("工具/HD-2D/7. 将 SampleScene 迁移到 HD-2D")]
     public static void Migrate()
     {
         if (!System.IO.File.Exists(ScenePath))
@@ -99,7 +99,7 @@ public static class SampleSceneHd2dSetup
         var mat = AssetDatabase.LoadAssetAtPath<Material>(GroundMatPath);
         if (mat == null)
         {
-            Debug.LogError("[HD2D] 找不到 " + GroundMatPath + "，先运行 Tools/HD2D/3");
+            Debug.LogError("[HD2D] 找不到 " + GroundMatPath + "，先运行 工具 / HD-2D / 3. 搭建 HD-2D 场景");
             return;
         }
 
@@ -257,7 +257,7 @@ public static class SampleSceneHd2dSetup
         var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(ProfilePath);
         if (profile == null)
         {
-            Debug.LogError("[HD2D] 找不到 " + ProfilePath + "，先运行 Tools/HD2D/3");
+            Debug.LogError("[HD2D] 找不到 " + ProfilePath + "，先运行 工具 / HD-2D / 3. 搭建 HD-2D 场景");
             return;
         }
 
