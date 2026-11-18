@@ -1,0 +1,665 @@
+{
+  "export_date": "2026-11-10T07:35:59.826642",
+  "animations": {
+    "Running": {
+      "south-west": {
+        "path": "Running/run_south-west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south-east": {
+        "path": "Running/run_south-east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north": {
+        "path": "Running/run_north.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-west": {
+        "path": "Running/run_north-west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south": {
+        "path": "Running/run_south.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-east": {
+        "path": "Running/run_north-east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "west": {
+        "path": "Running/run_west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "east": {
+        "path": "Running/run_east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      }
+    },
+    "Fight_Stance_Idle": {
+      "north-west": {
+        "path": "Idle/idle_north-west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "east": {
+        "path": "Idle/idle_east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south": {
+        "path": "Idle/idle_south.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-east": {
+        "path": "Idle/idle_north-east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south-west": {
+        "path": "Idle/idle_south-west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south-east": {
+        "path": "Idle/idle_south-east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north": {
+        "path": "Idle/idle_north.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "west": {
+        "path": "Idle/idle_west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      }
+    },
+    "Two_Punch_Combo": {
+      "south-west": {
+        "path": "Attack/attack_south-west.png",
+        "frames": 16,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "east": {
+        "path": "Attack/attack_east.png",
+        "frames": 16,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north": {
+        "path": "Attack/attack_north.png",
+        "frames": 16,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "west": {
+        "path": "Attack/attack_west.png",
+        "frames": 16,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-east": {
+        "path": "Attack/attack_north-east.png",
+        "frames": 16,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south": {
+        "path": "Attack/attack_south.png",
+        "frames": 16,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south-east": {
+        "path": "Attack/attack_south-east.png",
+        "frames": 16,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-west": {
+        "path": "Attack/attack_north-west.png",
+        "frames": 16,
+        "frame_size": [
+          64,
+          64
+        ]
+      }
+    },
+    "Full_Sprint": {
+      "west": {
+        "path": "Sprint/sprint_west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north": {
+        "path": "Sprint/sprint_north.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-west": {
+        "path": "Sprint/sprint_north-west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south-west": {
+        "path": "Sprint/sprint_south-west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south": {
+        "path": "Sprint/sprint_south.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-east": {
+        "path": "Sprint/sprint_north-east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "east": {
+        "path": "Sprint/sprint_east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south-east": {
+        "path": "Sprint/sprint_south-east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      }
+    },
+    "Taking_Punch": {
+      "south": {
+        "path": "Hurt/hurt_south.png",
+        "frames": 6,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south-east": {
+        "path": "Hurt/hurt_south-east.png",
+        "frames": 6,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south-west": {
+        "path": "Hurt/hurt_south-west.png",
+        "frames": 6,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north": {
+        "path": "Hurt/hurt_north.png",
+        "frames": 6,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "east": {
+        "path": "Hurt/hurt_east.png",
+        "frames": 6,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-east": {
+        "path": "Hurt/hurt_north-east.png",
+        "frames": 6,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "west": {
+        "path": "Hurt/hurt_west.png",
+        "frames": 6,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-west": {
+        "path": "Hurt/hurt_north-west.png",
+        "frames": 6,
+        "frame_size": [
+          64,
+          64
+        ]
+      }
+    },
+    "Right_Punch": {
+      "south": {
+        "path": "Attack/RightPunch/attack_south.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south-east": {
+        "path": "Attack/RightPunch/attack_south-east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-east": {
+        "path": "Attack/RightPunch/attack_north-east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north": {
+        "path": "Attack/RightPunch/attack_north.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "west": {
+        "path": "Attack/RightPunch/attack_west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south-west": {
+        "path": "Attack/RightPunch/attack_south-west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-west": {
+        "path": "Attack/RightPunch/attack_north-west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "east": {
+        "path": "Attack/RightPunch/attack_east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      }
+    },
+    "Left_Punch": {
+      "south-west": {
+        "path": "Attack/LeftPunch/attack_south-west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "west": {
+        "path": "Attack/LeftPunch/attack_west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north": {
+        "path": "Attack/LeftPunch/attack_north.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-west": {
+        "path": "Attack/LeftPunch/attack_north-west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south-east": {
+        "path": "Attack/LeftPunch/attack_south-east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south": {
+        "path": "Attack/LeftPunch/attack_south.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "east": {
+        "path": "Attack/LeftPunch/attack_east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-east": {
+        "path": "Attack/LeftPunch/attack_north-east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      }
+    },
+    "Uppercut": {
+      "south-east": {
+        "path": "Attack/Uppercut/attack_south-east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-west": {
+        "path": "Attack/Uppercut/attack_north-west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "east": {
+        "path": "Attack/Uppercut/attack_east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south": {
+        "path": "Attack/Uppercut/attack_south.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north": {
+        "path": "Attack/Uppercut/attack_north.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south-west": {
+        "path": "Attack/Uppercut/attack_south-west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "west": {
+        "path": "Attack/Uppercut/attack_west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-east": {
+        "path": "Attack/Uppercut/attack_north-east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      }
+    },
+    "Tuck_the_chin_and_shoulders_inward_to_initiate_a_t": {
+      "north": {
+        "path": "Dodge/dodge_north.png",
+        "frames": 9,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "west": {
+        "path": "Dodge/dodge_west.png",
+        "frames": 9,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south-west": {
+        "path": "Dodge/dodge_south-west.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-east": {
+        "path": "Dodge/dodge_north-east.png",
+        "frames": 9,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "east": {
+        "path": "Dodge/dodge_east.png",
+        "frames": 9,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south-east": {
+        "path": "Dodge/dodge_south-east.png",
+        "frames": 8,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south": {
+        "path": "Dodge/dodge_south.png",
+        "frames": 9,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-west": {
+        "path": "Dodge/dodge_north-west.png",
+        "frames": 9,
+        "frame_size": [
+          64,
+          64
+        ]
+      }
+    },
+    "Clutch_the_chest_with_both_hands_as_the_knees_buck": {
+      "north-west": {
+        "path": "Death/death_north-west.png",
+        "frames": 9,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "east": {
+        "path": "Death/death_east.png",
+        "frames": 9,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south": {
+        "path": "Death/death_south.png",
+        "frames": 9,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south-west": {
+        "path": "Death/death_south-west.png",
+        "frames": 9,
+        "frame_size": [
+          68,
+          68
+        ]
+      },
+      "west": {
+        "path": "Death/death_west.png",
+        "frames": 9,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "south-east": {
+        "path": "Death/death_south-east.png",
+        "frames": 9,
+        "frame_size": [
+          68,
+          68
+        ]
+      },
+      "north": {
+        "path": "Death/death_north.png",
+        "frames": 9,
+        "frame_size": [
+          64,
+          64
+        ]
+      },
+      "north-east": {
+        "path": "Death/death_north-east.png",
+        "frames": 9,
+        "frame_size": [
+          64,
+          64
+        ]
+      }
+    }
+  }
+}
