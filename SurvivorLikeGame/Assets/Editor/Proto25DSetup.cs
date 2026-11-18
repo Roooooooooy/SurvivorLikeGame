@@ -12,7 +12,7 @@ public static class Proto25DSetup
     const string GoblinPath = "Assets/Resources/Proto25D/goblin_25d.png";
     const string CatPath = "Assets/Resources/Proto25D/cat_25d.png";
 
-    [MenuItem("Tools/Proto/1. Setup 2.5D Scene")]
+    [MenuItem("工具/原型/1. 搭建 2.5D 场景")]
     public static void Setup()
     {
         EditorSceneManager.SaveOpenScenes();
@@ -67,7 +67,7 @@ public static class Proto25DSetup
         Debug.Log("[Proto25D] 场景已生成: " + ScenePath);
     }
 
-    [MenuItem("Tools/Proto/2. Capture 2.5D Preview")]
+    [MenuItem("工具/原型/2. 截取 2.5D 预览")]
     public static void Capture()
     {
         CaptureTo("/tmp/proto25d.png");
@@ -75,7 +75,7 @@ public static class Proto25DSetup
 
     // 透视对比：同样的场景，改为 FOV 40 的透视相机。
     // 正交只有压缩、没有近大远小；透视才会出现地面收敛和纵深。
-    [MenuItem("Tools/Proto/3. Capture Perspective Preview")]
+    [MenuItem("工具/原型/3. 截取透视预览")]
     public static void CapturePerspective()
     {
         var cam = Camera.main;

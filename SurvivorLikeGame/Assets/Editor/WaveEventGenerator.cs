@@ -10,7 +10,7 @@ public static class WaveEventGenerator
     const string EliteSpritePath = "Assets/Textures/enemy_slime_red.png";
     const string BossSpritePath = "Assets/Textures/enemy_slime_green.png";
 
-    [MenuItem("Tools/Survivor/Generate W5 Wave Assets")]
+    [MenuItem("工具/幸存者/生成 W5 波次事件资产")]
     public static void Generate()
     {
         if (!EnsureWaveFolder()) return;

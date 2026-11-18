@@ -7,7 +7,7 @@ public static class MetaUpgradeGenerator
 {
     const string MetaUpgradesDir = "Assets/Resources/MetaUpgrades";
 
-    [MenuItem("Tools/Survivor/Generate Meta Upgrades")]
+    [MenuItem("工具/幸存者/生成永久升级")]
     public static void Generate()
     {
         if (!EnsureFolder()) return;

@@ -1,0 +1,66 @@
+{
+  "repository": "https://github.com/dgreenheck/OpenFracture",
+  "revision": "6d0ddff64173193f024638c2de2dbeb8a2525965",
+  "purpose": "Editor-only mesh cutting; no runtime physics/plugin components",
+  "local_changes": [
+    "Namespace isolation",
+    "Remove optional code-coverage attributes"
+  ],
+  "files": [
+    {
+      "source": "Runtime/Scripts/Fragment/MeshSlicer.cs",
+      "file": "MeshSlicer.cs",
+      "upstream_sha256": "94bcdae8679137e39e84812aaea63cfca4eddf7a177303276734b5a3c4a21890"
+    },
+    {
+      "source": "Runtime/Scripts/Fragment/FragmentData.cs",
+      "file": "FragmentData.cs",
+      "upstream_sha256": "986a801ecd3eaddb906a395fbbd5a75b0d32e178ee6c54a82c6c3aa42530d246"
+    },
+    {
+      "source": "Runtime/Scripts/Fragment/MeshVertex.cs",
+      "file": "MeshVertex.cs",
+      "upstream_sha256": "fe493a0c519d8a9f566836f3781e2f26184436ad9ab0884fca5d43617474caef"
+    },
+    {
+      "source": "Runtime/Scripts/Fragment/ConstrainedTriangulator.cs",
+      "file": "ConstrainedTriangulator.cs",
+      "upstream_sha256": "ab7044b24ba2a63eeaef0ec12a3f7e3ae29e2a6f4ee3d9f22dad7ea3d6f04aa3"
+    },
+    {
+      "source": "Runtime/Scripts/Fragment/Triangulator.cs",
+      "file": "Triangulator.cs",
+      "upstream_sha256": "ae347fd0f1138f6098a0e95bc98473ec0d1cab350c71301301491b14ce0ad9c2"
+    },
+    {
+      "source": "Runtime/Scripts/Fragment/EdgeConstraint.cs",
+      "file": "EdgeConstraint.cs",
+      "upstream_sha256": "679a9054ad4f326ddaa75d83c6c4c7b0ffe1b184be6245ae63badcbb763a101b"
+    },
+    {
+      "source": "Runtime/Scripts/Fragment/Quad.cs",
+      "file": "Quad.cs",
+      "upstream_sha256": "b436f955702384b50ea7f3e4b51772467556cfdf83b990fd448df836fee6e437"
+    },
+    {
+      "source": "Runtime/Scripts/Fragment/TriangulationPoint.cs",
+      "file": "TriangulationPoint.cs",
+      "upstream_sha256": "edf2e096a010fa9401ad0c350bbde96d20df2650f95aae09e60228b26072327e"
+    },
+    {
+      "source": "Runtime/Scripts/Utilities/BinSort.cs",
+      "file": "BinSort.cs",
+      "upstream_sha256": "4f0f4dd7b75bf34d72020e5b3a428b2a06f25f4ff07e7ade17a1526117c65088"
+    },
+    {
+      "source": "Runtime/Scripts/Utilities/MathUtils.cs",
+      "file": "MathUtils.cs",
+      "upstream_sha256": "13fc1cd174f44635869f3149f4bf05c5717cf819f086d3d47310c7540fd77b74"
+    },
+    {
+      "source": "Runtime/Scripts/Utilities/Vector3Extensions.cs",
+      "file": "Vector3Extensions.cs",
+      "upstream_sha256": "363fcce6c9d3299500cd13c5a381bded22a0c6bb50a306a43d8ccceb33498ddd"
+    }
+  ]
+}
