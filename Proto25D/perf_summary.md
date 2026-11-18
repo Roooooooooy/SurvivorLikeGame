@@ -96,7 +96,7 @@ Game View：1022×1452（约 1.48 MP），vsync=0，targetFrameRate=-1
 
 ## 5. 复现方式
 
-1. 菜单 `Tools/HD2D/5. Build 1000 Enemy Perf Scene` 生成/重建 `HD2D_EnemyPerf.unity`。
+1. 菜单 `工具/HD-2D/5. 构建 1000 敌人压测场景` 生成/重建 `HD2D_EnemyPerf.unity`。
 2. 打开该场景，进入 Play。`EnemyPerfStress` 会自动生成敌人、跑两个阶段、写报告和截图。
 3. 输出目录：仓库根目录 `Proto25D/`：
    - `perf_{count}_enemies.md`（原始指标，已入库）
