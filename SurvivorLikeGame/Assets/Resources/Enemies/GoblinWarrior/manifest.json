@@ -1,0 +1,215 @@
+{
+  "canvas": [
+    96,
+    96
+  ],
+  "pixelsPerUnit": 24,
+  "directions": [
+    "east",
+    "north-east",
+    "north",
+    "north-west",
+    "west",
+    "south-west",
+    "south",
+    "south-east"
+  ],
+  "artGround": {
+    "east": 67,
+    "north-east": 64,
+    "north": 66,
+    "north-west": 66,
+    "west": 67,
+    "south-west": 63,
+    "south": 65,
+    "south-east": 65
+  },
+  "worldGround": [
+    67,
+    66,
+    66,
+    64,
+    67,
+    65,
+    65,
+    63
+  ],
+  "sheets": {
+    "Idle/idle/east": {
+      "path": "Idle/idle_east",
+      "frames": 8
+    },
+    "Idle/idle/north-east": {
+      "path": "Idle/idle_north-east",
+      "frames": 8
+    },
+    "Idle/idle/north": {
+      "path": "Idle/idle_north",
+      "frames": 8
+    },
+    "Idle/idle/north-west": {
+      "path": "Idle/idle_north-west",
+      "frames": 8
+    },
+    "Idle/idle/west": {
+      "path": "Idle/idle_west",
+      "frames": 8
+    },
+    "Idle/idle/south-west": {
+      "path": "Idle/idle_south-west",
+      "frames": 8
+    },
+    "Idle/idle/south": {
+      "path": "Idle/idle_south",
+      "frames": 8
+    },
+    "Idle/idle/south-east": {
+      "path": "Idle/idle_south-east",
+      "frames": 7
+    },
+    "Run/run/east": {
+      "path": "Run/run_east",
+      "frames": 8
+    },
+    "Run/run/north-east": {
+      "path": "Run/run_north-east",
+      "frames": 8
+    },
+    "Run/run/north": {
+      "path": "Run/run_north",
+      "frames": 8
+    },
+    "Run/run/north-west": {
+      "path": "Run/run_north-west",
+      "frames": 8
+    },
+    "Run/run/west": {
+      "path": "Run/run_west",
+      "frames": 8
+    },
+    "Run/run/south-west": {
+      "path": "Run/run_south-west",
+      "frames": 8
+    },
+    "Run/run/south": {
+      "path": "Run/run_south",
+      "frames": 8
+    },
+    "Run/run/south-east": {
+      "path": "Run/run_south-east",
+      "frames": 8
+    },
+    "Attack/attack/east": {
+      "path": "Attack/attack_east",
+      "frames": 9
+    },
+    "Attack/attack/north-east": {
+      "path": "Attack/attack_north-east",
+      "frames": 9
+    },
+    "Attack/attack/north": {
+      "path": "Attack/attack_north",
+      "frames": 9
+    },
+    "Attack/attack/north-west": {
+      "path": "Attack/attack_north-west",
+      "frames": 9
+    },
+    "Attack/attack/west": {
+      "path": "Attack/attack_west",
+      "frames": 9
+    },
+    "Attack/attack/south-west": {
+      "path": "Attack/attack_south-west",
+      "frames": 9
+    },
+    "Attack/attack/south": {
+      "path": "Attack/attack_south",
+      "frames": 9
+    },
+    "Attack/attack/south-east": {
+      "path": "Attack/attack_south-east",
+      "frames": 9
+    },
+    "Hit/hit/east": {
+      "path": "Hit/hit_east",
+      "frames": 9
+    },
+    "Hit/hit/north-east": {
+      "path": "Hit/hit_north-east",
+      "frames": 9
+    },
+    "Hit/hit/north": {
+      "path": "Hit/hit_north",
+      "frames": 9
+    },
+    "Hit/hit/north-west": {
+      "path": "Hit/hit_north-west",
+      "frames": 9
+    },
+    "Hit/hit/west": {
+      "path": "Hit/hit_west",
+      "frames": 9
+    },
+    "Hit/hit/south-west": {
+      "path": "Hit/hit_south-west",
+      "frames": 9
+    },
+    "Hit/hit/south": {
+      "path": "Hit/hit_south",
+      "frames": 9
+    },
+    "Hit/hit/south-east": {
+      "path": "Hit/hit_south-east",
+      "frames": 9
+    },
+    "Death/death_forward/east": {
+      "path": "Death/death_forward_east",
+      "frames": 9
+    },
+    "Death/death_forward/north-east": {
+      "path": "Death/death_forward_north-east",
+      "frames": 9
+    },
+    "Death/death_forward/north": {
+      "path": "Death/death_forward_north",
+      "frames": 9
+    },
+    "Death/death_forward/north-west": {
+      "path": "Death/death_forward_north-west",
+      "frames": 9
+    },
+    "Death/death_forward/west": {
+      "path": "Death/death_forward_west",
+      "frames": 9
+    },
+    "Death/death_forward/south-west": {
+      "path": "Death/death_forward_south-west",
+      "frames": 9
+    },
+    "Death/death_forward/south": {
+      "path": "Death/death_forward_south",
+      "frames": 9
+    },
+    "Death/death_forward/south-east": {
+      "path": "Death/death_forward_south-east",
+      "frames": 9
+    },
+    "Death/death_back/east": {
+      "path": "Death/death_back_east",
+      "frames": 7
+    },
+    "Death/death_back/west": {
+      "path": "Death/death_back_west",
+      "frames": 7
+    },
+    "Death/death_back/south": {
+      "path": "Death/death_back_south",
+      "frames": 7
+    },
+    "Death/death_collapse/south": {
+      "path": "Death/death_collapse_south",
+      "frames": 9
+    }
+  }
+}
