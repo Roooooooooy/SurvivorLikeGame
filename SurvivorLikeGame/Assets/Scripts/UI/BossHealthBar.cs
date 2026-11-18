@@ -31,6 +31,7 @@ public class BossHealthBar : MonoBehaviour
     private static void Bootstrap()
     {
         if (instance != null) return;
+        if (RpgGame.RegionRuntime.IsAction) return;
 
         var go = new GameObject("BossHealthBarCanvas", typeof(RectTransform));
         go.AddComponent<BossHealthBar>();

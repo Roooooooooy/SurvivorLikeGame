@@ -2,8 +2,8 @@ using UnityEngine;
 
 // 全局 UI 主题：颜色、字体、九宫格 Sprite 的唯一来源。
 // 运行时 UI 通过 UITheme.Current 读取（Resources/UITheme.asset），
-// 编辑器里由 Tools/Survivor/Generate UI Theme 生成/更新。
-[CreateAssetMenu(fileName = "UITheme", menuName = "Survivor/UI Theme")]
+// 编辑器里由 工具/幸存者/生成 UI 主题 生成/更新。
+[CreateAssetMenu(fileName = "UITheme", menuName = "幸存者/UI 主题")]
 public class UITheme : ScriptableObject
 {
     [Header("字体")]
