@@ -41,7 +41,7 @@ public class UpgradeEffect
     public GameObject weaponPrefab;                // 仅 WeaponGrant 使用：要授予的武器 prefab
 }
 
-[CreateAssetMenu(fileName = "UpgradeData", menuName = "Survivor/Upgrade Data")]
+[CreateAssetMenu(fileName = "UpgradeData", menuName = "幸存者/升级数据")]
 public class UpgradeData : ScriptableObject
 {
     public string id;                    // 唯一标识：堆叠计数与进化条件的依据

@@ -33,6 +33,11 @@ public class WaveEventScheduler : MonoBehaviour
     static void AutoCreate()
     {
         if (instance != null) return;
+
+        // 动作区/菜单没有 GameManager，也没有幸存者波次，不要创建调度器。
+        if (RpgGame.RegionRuntime.IsAction) return;
+        if (GameManager.Instance == null) return;
+
         new GameObject("[WaveEventScheduler]").AddComponent<WaveEventScheduler>();
     }
 
@@ -74,6 +79,8 @@ public class WaveEventScheduler : MonoBehaviour
 
     void Update()
     {
+        if (RpgGame.RegionRuntime.IsAction) return;
+
         var gm = GameManager.Instance;
         if (gm == null) return;
 

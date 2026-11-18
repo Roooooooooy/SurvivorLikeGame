@@ -160,7 +160,8 @@ public class CharacterSelectScreen : MonoBehaviour
         float halfWidth = PanelWidth * 0.5f;
 
         // 全屏深色遮罩：盖住标题页，同时吞掉鼠标点击
-        var scrim = UIFactory.CreateImage(transform, "Scrim", null, new Color(0f, 0f, 0f, 0.78f),
+        // 全屏遮罩：压暗得比较轻，让标题页动态背景透出来；仍然吞掉鼠标点击
+        var scrim = UIFactory.CreateImage(transform, "Scrim", null, new Color(0f, 0f, 0f, 0.42f),
             false, true);
         UIFactory.Stretch(scrim.rectTransform);
 

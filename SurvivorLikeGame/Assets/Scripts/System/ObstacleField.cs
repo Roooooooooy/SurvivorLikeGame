@@ -52,6 +52,11 @@ public class ObstacleField : MonoBehaviour
     static void Boot()
     {
         if (Instance != null) return;
+
+        // 程序化障碍场是幸存者玩法的一部分；动作区使用手工摆放的场景物件。
+        if (RpgGame.RegionRuntime.IsAction) return;
+        if (GameManager.Instance == null) return;
+
         var go = new GameObject("ObstacleField");
         go.AddComponent<ObstacleField>();
     }

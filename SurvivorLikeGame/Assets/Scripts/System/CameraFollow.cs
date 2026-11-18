@@ -1,4 +1,5 @@
 using UnityEngine;
+using RpgGame;
 
 public class CameraFollow : MonoBehaviour
 {
@@ -8,12 +9,16 @@ public class CameraFollow : MonoBehaviour
     public Vector3 hd2dOffset = new Vector3(0f, 9f, -14f);
     public Vector3 hd2dEuler = new Vector3(30f, 0f, 0f);
 
+    [Tooltip("跟随平滑速度：越大越跟手，越小滞后越明显。")]
+    public float followSmooth = 8f;
+
     private Transform target;
+    private Vector3 smoothedPosition;
+    private bool hasSmoothedPosition;
 
     void Start()
     {
-        if (PlayerController.Instance != null)
-            target = PlayerController.Instance.transform;
+        target = ResolveTarget();
         if (hd2d)
             transform.rotation = Quaternion.Euler(hd2dEuler);
     }
@@ -22,26 +27,63 @@ public class CameraFollow : MonoBehaviour
     {
         if (target == null)
         {
-            if (PlayerController.Instance != null)
-                target = PlayerController.Instance.transform;
-            return;
+            target = ResolveTarget();
+            if (target == null) return;
+            hasSmoothedPosition = false;
         }
 
+        Vector3 desired;
         if (hd2d)
         {
-            // 逻辑在 XY，视觉世界在 XZ；震屏偏移也投到地面上
-            Vector3 shake = CameraShake.Offset;
+            // 逻辑在 XY，视觉世界在 XZ
             Vector3 p = target.position;
-            transform.position = new Vector3(
-                p.x + hd2dOffset.x + shake.x,
-                hd2dOffset.y,
-                p.y + hd2dOffset.z + shake.y);
-            return;
+            desired = new Vector3(p.x + hd2dOffset.x, hd2dOffset.y, p.y + hd2dOffset.z);
+        }
+        else
+        {
+            desired = new Vector3(target.position.x, target.position.y, transform.position.z);
         }
 
-        // 紧密跟随：不做平滑滞后，避免移动时主角相对地面漂移。
-        // 震屏仍叠加在真实目标位置上，下一帧直接覆盖，不会污染基准位置。
-        Vector3 desired = new Vector3(target.position.x, target.position.y, transform.position.z);
-        transform.position = desired + CameraShake.Offset;
+        if (!hasSmoothedPosition)
+        {
+            smoothedPosition = desired;
+            hasSmoothedPosition = true;
+        }
+        else
+        {
+            // 帧率无关的指数平滑：保留一点滞后和惯性，速度越快偏移越明显
+            float t = 1f - Mathf.Exp(-followSmooth * Time.deltaTime);
+            smoothedPosition = Vector3.Lerp(smoothedPosition, desired, t);
+        }
+
+        // 震屏只叠加在输出上，不写回平滑基准，避免污染跟随位置
+        Vector3 shake = CameraShake.Offset;
+        transform.position = hd2d
+            ? new Vector3(smoothedPosition.x + shake.x, smoothedPosition.y, smoothedPosition.z + shake.y)
+            : smoothedPosition + shake;
+    }
+
+    // 幸存者区用 PlayerController，动作区用 PlayerHealth/PlayerMotor。
+    // 同一套 HD-2D 相机参数可以同时服务两种模式。
+    static Transform ResolveTarget()
+    {
+        // 动作区优先跟随动作玩家，避免误加载的幸存者玩家把镜头拉走。
+        if (RegionRuntime.IsAction)
+        {
+            if (PlayerHealth.Player != null)
+                return PlayerHealth.Player.transform;
+
+            var actionMotor = Object.FindFirstObjectByType<PlayerMotor>();
+            return actionMotor != null ? actionMotor.transform : null;
+        }
+
+        if (PlayerController.Instance != null)
+            return PlayerController.Instance.transform;
+
+        if (PlayerHealth.Player != null)
+            return PlayerHealth.Player.transform;
+
+        var motor = Object.FindFirstObjectByType<PlayerMotor>();
+        return motor != null ? motor.transform : null;
     }
 }

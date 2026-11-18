@@ -11,7 +11,7 @@ public enum WaveEventType
 
 // 波次事件数据：一份资产 = 时间线上一个到点触发的事件。
 // 节奏在 Resources/WaveEvents 下配置，运行时由 WaveEventScheduler 读取。
-[CreateAssetMenu(fileName = "WaveEvent", menuName = "Survivor/Wave Event")]
+[CreateAssetMenu(fileName = "WaveEvent", menuName = "幸存者/波次事件")]
 public class WaveEventData : ScriptableObject
 {
     [Header("类型与时间")]

@@ -43,12 +43,25 @@ public class GameManager : MonoBehaviour
 
     void Awake()
     {
+        // 动作区里如果误加载了幸存者场景，禁用旧的 GameManager，避免刷怪/标题/时间缩放干扰。
+        if (RpgGame.RegionRuntime.IsAction)
+        {
+            enabled = false;
+            return;
+        }
+
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
     }
 
     void Start()
     {
+        if (RpgGame.RegionRuntime.IsAction)
+        {
+            enabled = false;
+            return;
+        }
+
         currentSpawnInterval = baseSpawnInterval;
         if (gameOverPanel) gameOverPanel.SetActive(false);
         if (levelUpPanel)
@@ -71,6 +84,8 @@ public class GameManager : MonoBehaviour
     void ShowOverlayHintsOnTitle()
     {
         if (titleScreen == null) return;
+        // 标题页 v2 自带完整菜单与键位角标，不再往副标题里追加旧版英文提示
+        if (TitleScreenV2.Active) return;
         var controller = titleScreen.GetComponent<TitleScreenController>();
         if (controller == null || controller.subtitle == null) return;
 
@@ -82,7 +97,7 @@ public class GameManager : MonoBehaviour
         subtitle.text = hint;
     }
 
-    void StartGame()
+    public void StartGame()
     {
         isTitleScreen = false;
         if (titleScreen) titleScreen.SetActive(false);
@@ -91,6 +106,8 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
+        if (RpgGame.RegionRuntime.IsAction) return;
+
         // 快捷键：升级界面按 1/2/3 选择；结算界面按 R 重开（timeScale=0 时 Update 照常运行）
         var kb = UnityEngine.InputSystem.Keyboard.current;
         if (isTitleScreen)
@@ -119,33 +136,9 @@ public class GameManager : MonoBehaviour
                 return;
             }
 
-            if (kb != null)
-            {
-                // TAB / C / D 优先于「任意键开始」：打开浮层的那一帧不能同时开局。
-                // 三个浮层互斥，打开前先关掉另外两个。
-                if (kb.tabKey.wasPressedThisFrame)
-                {
-                    CharacterSelectScreen.Hide();
-                    DifficultySelectScreen.Hide();
-                    MetaShopScreen.Show();
-                    return;
-                }
-                if (kb.cKey.wasPressedThisFrame)
-                {
-                    MetaShopScreen.Hide();
-                    DifficultySelectScreen.Hide();
-                    CharacterSelectScreen.Show();
-                    return;
-                }
-                if (kb.dKey.wasPressedThisFrame)
-                {
-                    MetaShopScreen.Hide();
-                    CharacterSelectScreen.Hide();
-                    DifficultySelectScreen.Show();
-                    return;
-                }
-                if (kb.anyKey.wasPressedThisFrame) StartGame();
-            }
+            // 标题页 v2：打开浮层改由菜单里的上下选择 + Enter 确认完成，
+            // 不再提供 TAB / C / D 直达；没有菜单的旧场景保留「任意键开始」兜底。
+            if (kb != null && !TitleScreenV2.Active && kb.anyKey.wasPressedThisFrame) StartGame();
             return;
         }
         if (kb != null)
