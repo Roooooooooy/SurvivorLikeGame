@@ -16,7 +16,7 @@ public enum MetaStatType
 
 // 永久升级数据：一份资产 = 商店里的一项可购买升级。
 // 等级与累计金币一起存在 PlayerPrefs，跨局生效。
-[CreateAssetMenu(fileName = "MetaUpgrade", menuName = "Survivor/Meta Upgrade")]
+[CreateAssetMenu(fileName = "MetaUpgrade", menuName = "幸存者/永久升级")]
 public class MetaUpgradeData : ScriptableObject
 {
     public string id;                    // 唯一标识，PlayerPrefs 等级键的依据

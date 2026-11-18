@@ -157,6 +157,32 @@ public class Hd2dFootDust : MonoBehaviour
         }
     }
 
+    // 死亡/消散用的一次性爆发：粒子从身体中段散开，并带一个风的方向。
+    public void DeathBurst(Vector3 pos, int count, float sizeScale, Vector3 wind)
+    {
+        if (ps == null) return;
+
+        for (int i = 0; i < count; i++)
+        {
+            Vector2 dir = Random.insideUnitCircle.normalized;
+            var emit = new ParticleSystem.EmitParams
+            {
+                position = new Vector3(
+                    pos.x + Random.Range(-0.25f, 0.25f),
+                    pos.y + Random.Range(-0.2f, 0.35f),
+                    pos.z + Random.Range(-0.25f, 0.25f)),
+                velocity = new Vector3(
+                    dir.x * Random.Range(0.2f, 0.55f) + wind.x,
+                    Random.Range(0.2f, 0.5f) + wind.y,
+                    dir.y * Random.Range(0.2f, 0.55f) + wind.z),
+                startColor = color,
+                startSize = size * sizeScale * Random.Range(0.7f, 1.4f),
+                startLifetime = 0.45f,
+            };
+            ps.Emit(emit, 1);
+        }
+    }
+
     static Texture2D CreateSoftDot()
     {
         const int size = 32;

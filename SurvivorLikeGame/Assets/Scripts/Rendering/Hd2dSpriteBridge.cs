@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using RpgGame;
 
 // HD-2D 视觉桥：主场景的玩法仍然使用 XY 平面（Rigidbody2D / 2D 碰撞不变），
 // 只把 SpriteRenderer 的视觉映射到世界 (x, 0, y) 的 billboard 上。
@@ -44,6 +45,7 @@ public class Hd2dSpriteBridge : MonoBehaviour
         public bool isPlayer;
         public bool isObstacle;
         public float lift;
+        public Hd2dProxyLift liftMarker;
         public Texture tex;
 
         public bool isMesh;
@@ -163,8 +165,10 @@ public class Hd2dSpriteBridge : MonoBehaviour
             return;
         }
 
-        bool isPlayer = source.GetComponentInParent<PlayerController>() != null;
+        bool isPlayer = source.GetComponentInParent<PlayerController>() != null
+            || source.GetComponentInParent<PlayerMotor>() != null;
         bool isObstacle = !isPlayer && source.GetComponentInParent<Obstacle>() != null;
+        var liftMarker = source.GetComponent<Hd2dProxyLift>();
 
         // 主角已由 Spine / 8 方向像素视图接管时，不再创建 2D billboard 代理
         if (isPlayer && (Hd2dSpinePlayer.Active || Hd2dPixelPlayer.Active))
@@ -188,10 +192,12 @@ public class Hd2dSpriteBridge : MonoBehaviour
         go.transform.SetParent(root, false);
 
         var sr = go.AddComponent<SpriteRenderer>();
-        sr.shadowCastingMode = (isPlayer || isObstacle)
-            ? ShadowCastingMode.On
-            : ShadowCastingMode.Off;
-        sr.receiveShadows = isPlayer || isObstacle;
+        sr.shadowCastingMode = liftMarker != null
+            ? (liftMarker.castShadow ? ShadowCastingMode.On : ShadowCastingMode.Off)
+            : ((isPlayer || isObstacle) ? ShadowCastingMode.On : ShadowCastingMode.Off);
+        sr.receiveShadows = liftMarker != null
+            ? liftMarker.receiveShadows
+            : (isPlayer || isObstacle);
 
         var proxy = new Proxy
         {
@@ -200,7 +206,10 @@ public class Hd2dSpriteBridge : MonoBehaviour
             go = go,
             isPlayer = isPlayer,
             isObstacle = isObstacle,
-            lift = isPlayer ? playerLift : (isObstacle ? propLift : effectLift),
+            lift = liftMarker != null
+                ? liftMarker.lift
+                : (isPlayer ? playerLift : (isObstacle ? propLift : effectLift)),
+            liftMarker = liftMarker,
         };
 
         // 主角额外挂一个“被遮挡时可见”的剪影；它只在深度测试失败处出像素
@@ -220,6 +229,14 @@ public class Hd2dSpriteBridge : MonoBehaviour
         source.forceRenderingOff = true;
 
         ApplyMaterial(proxy);
+    }
+
+    // 源 SpriteRenderer 换了材质（例如死亡消散）时，让代理立即同步。
+    public void RefreshMaterial(SpriteRenderer source)
+    {
+        if (source == null) return;
+        if (proxies.TryGetValue(source, out var p) && p != null)
+            ApplyMaterial(p);
     }
 
     void CreateMeshProxy(SpriteRenderer source, Hd2dPropLibrary.Entry entry)
@@ -421,6 +438,15 @@ public class Hd2dSpriteBridge : MonoBehaviour
             p.xray.flipY = p.renderer.flipY;
         }
 
+        // 逐实例高度/阴影覆盖：角色表有上下留白，需要按当前方向把脚底线压回地面。
+        if (p.liftMarker != null)
+        {
+            p.lift = p.liftMarker.lift;
+            p.renderer.shadowCastingMode = p.liftMarker.castShadow
+                ? ShadowCastingMode.On
+                : ShadowCastingMode.Off;
+        }
+
         Vector3 pos = src.transform.position;
         Vector3 scale = src.transform.lossyScale;
         float sx = Mathf.Abs(scale.x);
@@ -440,15 +466,13 @@ public class Hd2dSpriteBridge : MonoBehaviour
         p.go.transform.position = world;
         p.go.transform.localScale = new Vector3(sx, sy, 1f);
 
-        // 绕 Y 轴面向相机；保留源精灵的 Z 旋转（旋转飞镖等）
-        Vector3 toCam = cam.transform.position - world;
-        toCam.y = 0f;
-        if (toCam.sqrMagnitude > 0.0001f)
-        {
-            float zRot = src.transform.eulerAngles.z;
-            p.go.transform.rotation =
-                Quaternion.LookRotation(toCam, Vector3.up) * Quaternion.Euler(0f, 0f, zRot);
-        }
+        // 固定使用相机 yaw，而不是每个精灵各自朝向相机位置：
+        // 否则画面左右边缘的怪物会向相机偏转，看起来方向变了。
+        // 保留源精灵的 Z 旋转（旋转飞镖等）。
+        float cameraYaw = cam.transform.eulerAngles.y + 180f;
+        float zRot = src.transform.eulerAngles.z;
+        p.go.transform.rotation =
+            Quaternion.Euler(0f, cameraYaw, 0f) * Quaternion.Euler(0f, 0f, zRot);
     }
 
     void ApplyMaterial(Proxy p)
