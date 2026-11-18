@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4afa3ce241fc24195b172db9da503561, type: 3}
+  m_Name: SlashVfxLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::RpgGame.SlashVfxLibrary
+  styles:
+  - prefab: {fileID: 5313456068782518071, guid: 50f1354827c77ef4b99c4dca0ee3411d, type: 3}
+    punchMode: 1
+    localRadius: 2
+    rotationOffset: 0
+    scaleMultiplier: 0.95
+    colorIntensity: 5.5
+    playbackSpeed: 1.2
+    particleIntensity: 0.8
+    includeSmoke: 0
+    includeFlying: 0
+    includeDistortion: 0
+    includeImpact: 1
+    includeLight: 0
+    lightIntensity: 1.2
+  - prefab: {fileID: 5313456068782518071, guid: 50f1354827c77ef4b99c4dca0ee3411d, type: 3}
+    punchMode: 1
+    localRadius: 2
+    rotationOffset: 14
+    scaleMultiplier: 1
+    colorIntensity: 6.5
+    playbackSpeed: 1
+    particleIntensity: 1
+    includeSmoke: 1
+    includeFlying: 1
+    includeDistortion: 0
+    includeImpact: 1
+    includeLight: 0
+    lightIntensity: 1.2
+  - prefab: {fileID: 5313456068782518071, guid: 50f1354827c77ef4b99c4dca0ee3411d, type: 3}
+    punchMode: 1
+    localRadius: 2
+    rotationOffset: -14
+    scaleMultiplier: 1.15
+    colorIntensity: 8
+    playbackSpeed: 0.9
+    particleIntensity: 1.35
+    includeSmoke: 1
+    includeFlying: 1
+    includeDistortion: 0
+    includeImpact: 1
+    includeLight: 1
+    lightIntensity: 1.2
