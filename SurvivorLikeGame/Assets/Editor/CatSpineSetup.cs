@@ -16,7 +16,7 @@ public static class CatSpineSetup
     const string AtlasAssetPath = Dir + "/cat_spine_Atlas.asset";
     const string DataAssetPath = Dir + "/cat_spine_SkeletonData.asset";
 
-    [MenuItem("Tools/HD2D/8. Build Cat Spine Assets")]
+    [MenuItem("工具/HD-2D/8. 构建猫 Spine 资产")]
     public static void BuildMenu()
     {
         Build();

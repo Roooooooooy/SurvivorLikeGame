@@ -16,7 +16,7 @@ public static class EnemySpriteTrimSetup
     // 内容矩形向外扩的像素数：要盖住 shader 的 1.25 texel 描边
     const int PaddingTexels = 2;
 
-    [MenuItem("Tools/HD2D/9. Analyze Enemy Sprite Trim")]
+    [MenuItem("工具/HD-2D/9. 分析敌人精灵裁剪")]
     public static void Analyze()
     {
         var guids = AssetDatabase.FindAssets("t:EnemyTypeTable");
