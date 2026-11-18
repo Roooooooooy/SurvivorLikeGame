@@ -7,7 +7,7 @@ public static class CharacterGenerator
 {
     const string CharactersDir = "Assets/Resources/Characters";
 
-    [MenuItem("Tools/Survivor/Generate Characters")]
+    [MenuItem("工具/幸存者/生成角色")]
     public static void Generate()
     {
         if (!EnsureFolder()) return;

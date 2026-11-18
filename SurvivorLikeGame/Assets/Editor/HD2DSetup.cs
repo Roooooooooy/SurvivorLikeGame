@@ -12,7 +12,7 @@ public static class HD2DSetup
     const string RendererPath = SettingsDir + "/HD2D_Renderer.asset";
     const string PipelinePath = SettingsDir + "/HD2D_Pipeline.asset";
 
-    [MenuItem("Tools/HD2D/1. Create URP Assets")]
+    [MenuItem("工具/HD-2D/1. 创建 URP 资产")]
     public static void CreateUrpAssets()
     {
         if (!AssetDatabase.IsValidFolder(SettingsDir))
@@ -61,7 +61,7 @@ public static class HD2DSetup
         Debug.Log("[HD2D] URP Asset 已创建并设为默认管线: " + PipelinePath);
     }
 
-    [MenuItem("Tools/HD2D/2. Switch To URP")]
+    [MenuItem("工具/HD-2D/2. 切换到 URP")]
     public static void SwitchToUrp()
     {
         var pipeline = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(PipelinePath);

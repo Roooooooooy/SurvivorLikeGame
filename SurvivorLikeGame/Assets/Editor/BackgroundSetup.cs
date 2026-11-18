@@ -7,7 +7,7 @@ public static class BackgroundSetup
 {
     const string Dir = "Assets/Textures/Background/";
 
-    [MenuItem("Tools/SurvivorLikeGame/Apply Background Art")]
+    [MenuItem("工具/幸存者游戏/应用背景美术")]
     public static void Apply()
     {
         var floor = LoadSprite("bg_stone_floor.png");

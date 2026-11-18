@@ -8,7 +8,7 @@ public static class Cat8DirSetup
 {
     const string ScenePath = "Assets/Scenes/SampleScene.unity";
 
-    [MenuItem("Tools/HD2D/10. Setup Cat 8Dir Player")]
+    [MenuItem("工具/HD-2D/10. 配置猫 8 方向主角")]
     static void Setup()
     {
         var active = EditorSceneManager.GetActiveScene();

@@ -10,7 +10,7 @@ public static class HD2DLowPolyKit
     const string Dir = "Assets/Meshes/HD2D";
     const float UvPerMeter = 1f / 6f; // 6 米一次贴图重复，与墙面砖块尺寸接近
 
-    [MenuItem("Tools/HD2D/6. Build Low-Poly Dungeon Kit")]
+    [MenuItem("工具/HD-2D/6. 构建低模地牢套件")]
     public static void Build()
     {
         EnsureFolder();

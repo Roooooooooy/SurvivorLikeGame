@@ -9,7 +9,7 @@ public static class CoinPrefabGenerator
     const string SpritePath = "Assets/Textures/ExpGemSprite.png";
     const string EnemyTypesPath = "Assets/Resources/EnemyTypes.asset";
 
-    [MenuItem("Tools/Survivor/Generate Coin Prefab")]
+    [MenuItem("工具/幸存者/生成金币预制体")]
     public static void Generate()
     {
         var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);
