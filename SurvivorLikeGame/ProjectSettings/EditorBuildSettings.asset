@@ -4,5 +4,22 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
-  m_configObjects: {}
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/Boot.unity
+    guid: 44a708aa6f94a4fb8b6d7db42af33976
+  - enabled: 1
+    path: Assets/Scenes/MainMenu.unity
+    guid: bbbf9c3eb3116402bbf1929a82d80ec5
+  - enabled: 1
+    path: Assets/Scenes/Region_Test.unity
+    guid: 83ce2b4fc5ecf4c668d155776ae9a19d
+  - enabled: 1
+    path: Assets/Scenes/SampleScene.unity
+    guid: 9fc0d4010bbf28b4594072e72b8655ab
+  - enabled: 1
+    path: Assets/Scenes/Region_KayKit.unity
+    guid: 81f43e3d8d0654fac91c6c8e6db4eaaa
+  m_configObjects:
+    com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
+  m_UseUCBPForAssetBundles: 0
