@@ -8,7 +8,7 @@ public static class BossRewardGenerator
     const string EvolutionsDir = "Assets/Resources/Evolutions";
     const string RecipePath = EvolutionsDir + "/evo_boss_core_orbs.asset";
 
-    [MenuItem("Tools/Survivor/Generate Boss Evolution Recipe")]
+    [MenuItem("工具/幸存者/生成 Boss 进化配方")]
     public static void Generate()
     {
         if (!AssetDatabase.IsValidFolder(EvolutionsDir))

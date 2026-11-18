@@ -2,7 +2,7 @@ using UnityEngine;
 
 // 角色数据：初始武器、初始属性加成与被动描述。
 // 一份资产 = 一个可选角色；选择结果存 PlayerPrefs，新局开始时应用。
-[CreateAssetMenu(fileName = "Character", menuName = "Survivor/Character")]
+[CreateAssetMenu(fileName = "Character", menuName = "幸存者/角色")]
 public class CharacterData : ScriptableObject
 {
     public string id;                    // 唯一标识，PlayerPrefs 选择键的依据

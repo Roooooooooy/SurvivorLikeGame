@@ -19,7 +19,7 @@ public static class UIThemeGenerator
         TextureDir + "/border_020.png",
     };
 
-    [MenuItem("Tools/Survivor/Generate UI Theme")]
+    [MenuItem("工具/幸存者/生成 UI 主题")]
     public static void Generate()
     {
         foreach (var path in NineSlicePanels)

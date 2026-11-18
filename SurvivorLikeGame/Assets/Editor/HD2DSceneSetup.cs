@@ -15,7 +15,7 @@ public static class HD2DSceneSetup
     const string GoblinPath = "Assets/Resources/Proto25D/goblin_25d.png";
     const string PillarPath = "Assets/Resources/Proto25D/pillar_25d.png";
 
-    [MenuItem("Tools/HD2D/3. Setup HD-2D Scene")]
+    [MenuItem("工具/HD-2D/3. 搭建 HD-2D 场景")]
     public static void SetupScene()
     {
         EditorSceneManager.SaveOpenScenes();
@@ -60,7 +60,7 @@ public static class HD2DSceneSetup
         Debug.Log("[HD2D] 场景已生成: " + ScenePath);
     }
 
-    [MenuItem("Tools/HD2D/4. Capture HD-2D Preview")]
+    [MenuItem("工具/HD-2D/4. 截取 HD-2D 预览")]
     public static void Capture()
     {
         // Play 模式下必须截真实渲染帧：手动 cam.Render() 不会执行 Volume 和 Renderer Feature。

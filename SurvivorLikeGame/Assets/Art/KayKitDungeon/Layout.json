@@ -1,0 +1,34 @@
+{
+  "seed": 20261110,
+  "rooms": [
+    { "minX": -5, "maxX": 0, "minY": -4, "maxY": 3 },
+    { "minX": 1, "maxX": 1, "minY": -1, "maxY": 0 },
+    { "minX": 2, "maxX": 4, "minY": -2, "maxY": 1 }
+  ],
+  "variants": [
+    { "id": "PillarPlain", "model": "pillar", "scale": 0.6 },
+    { "id": "PillarDecorated", "model": "pillar_decorated", "scale": 0.6, "detailModel": "banner_shield_blue", "detailScale": 0.5, "detailOffset": [0, 2.5, -0.9] },
+    { "id": "SupplyBarrels", "model": "barrel_small_stack", "scale": 0.65, "detailModel": "box_small", "detailScale": 0.7, "detailOffset": [1.5, 0, 0.3] },
+    { "id": "SupplyCrates", "model": "crates_stacked", "scale": 0.6, "destructible": true, "maxHealth": 30 },
+    { "id": "RubbleLow", "model": "rubble_half", "scale": 0.65 },
+    { "id": "CrateSingle", "model": "box_small", "scale": 0.75, "destructible": true, "maxHealth": 20 },
+    { "id": "Table", "model": "table_medium", "scale": 0.55, "destructible": true, "maxHealth": 30 },
+    { "id": "CandleShelf", "model": "shelf_small_candles", "scale": 0.65 }
+  ],
+  "props": [
+    { "variant": "PillarPlain", "x": -8, "y": -5, "yaw": 0 },
+    { "variant": "PillarPlain", "x": -8, "y": 0, "yaw": 90 },
+    { "variant": "PillarDecorated", "x": -8, "y": 5, "yaw": 0 },
+    { "variant": "PillarDecorated", "x": 0, "y": 5, "yaw": 90 },
+    { "variant": "SupplyBarrels", "x": -8, "y": -2, "yaw": 0 },
+    { "id": "courtyard_supplies", "variant": "SupplyCrates", "x": 0, "y": 3, "yaw": 0 },
+    { "variant": "RubbleLow", "x": -6, "y": 5, "yaw": 0 },
+    { "variant": "RubbleLow", "x": -9, "y": 2, "yaw": 0 },
+    { "id": "courtyard_table", "variant": "Table", "x": -7, "y": 3, "yaw": 0 },
+    { "id": "entrance_crate", "variant": "CrateSingle", "x": -1, "y": -5, "yaw": 0 },
+    { "id": "south_crate", "variant": "CrateSingle", "x": -6, "y": -7, "yaw": 0 },
+    { "id": "side_room_supplies", "variant": "SupplyCrates", "x": 4.5, "y": -2.5, "yaw": 0 },
+    { "id": "side_room_table", "variant": "Table", "x": 8, "y": -2, "yaw": 0 },
+    { "variant": "CandleShelf", "x": 8, "y": 2.5, "yaw": 0 }
+  ]
+}

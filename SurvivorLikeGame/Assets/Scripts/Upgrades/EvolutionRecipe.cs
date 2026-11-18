@@ -1,7 +1,7 @@
 using UnityEngine;
 
 // 武器进化配方：基础武器满级 + 持有指定升级后，在升级界面作为进化选项出现
-[CreateAssetMenu(fileName = "EvolutionRecipe", menuName = "Survivor/Evolution Recipe")]
+[CreateAssetMenu(fileName = "EvolutionRecipe", menuName = "幸存者/进化配方")]
 public class EvolutionRecipe : ScriptableObject
 {
     public WeaponTarget baseWeapon;      // 需要满级的基础武器

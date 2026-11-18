@@ -10,7 +10,7 @@ public static class EnemyPerfSetup
     const string SourceScene = "Assets/Scenes/HD2D_Proto.unity";
     const string PerfScene = "Assets/Scenes/HD2D_EnemyPerf.unity";
 
-    [MenuItem("Tools/HD2D/5. Build 1000 Enemy Perf Scene")]
+    [MenuItem("工具/HD-2D/5. 构建 1000 敌人压测场景")]
     public static void BuildPerfScene()
     {
         if (AssetDatabase.LoadAssetAtPath<SceneAsset>(SourceScene) == null)

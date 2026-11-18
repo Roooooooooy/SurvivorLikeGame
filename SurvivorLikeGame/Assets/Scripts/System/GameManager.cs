@@ -43,12 +43,25 @@ public class GameManager : MonoBehaviour
 
     void Awake()
     {
+        // 动作区里如果误加载了幸存者场景，禁用旧的 GameManager，避免刷怪/标题/时间缩放干扰。
+        if (RpgGame.RegionRuntime.IsAction)
+        {
+            enabled = false;
+            return;
+        }
+
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
     }
 
     void Start()
     {
+        if (RpgGame.RegionRuntime.IsAction)
+        {
+            enabled = false;
+            return;
+        }
+
         currentSpawnInterval = baseSpawnInterval;
         if (gameOverPanel) gameOverPanel.SetActive(false);
         if (levelUpPanel)
@@ -93,6 +106,8 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
+        if (RpgGame.RegionRuntime.IsAction) return;
+
         // 快捷键：升级界面按 1/2/3 选择；结算界面按 R 重开（timeScale=0 时 Update 照常运行）
         var kb = UnityEngine.InputSystem.Keyboard.current;
         if (isTitleScreen)

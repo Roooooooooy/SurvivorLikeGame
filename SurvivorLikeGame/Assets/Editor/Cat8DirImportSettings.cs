@@ -18,13 +18,14 @@ public class Cat8DirImportSettings : AssetPostprocessor
         ti.mipmapEnabled = false;
         ti.alphaIsTransparency = true;
         ti.wrapMode = TextureWrapMode.Clamp;
-        ti.maxTextureSize = 512;
+        // 攻击表为 16 帧 × 64px = 1024px 宽，512 会把帧压成 32px。
+        ti.maxTextureSize = 1024;
         ti.npotScale = TextureImporterNPOTScale.None;
         ti.isReadable = true;
         ti.sRGBTexture = true;
     }
 
-    [MenuItem("Tools/HD2D/9. Reimport Cat 8Dir Sheets")]
+    [MenuItem("工具/HD-2D/11. 重新导入猫 8 方向精灵表")]
     static void Reimport()
     {
         AssetDatabase.ImportAsset("Assets/Resources/Player/Cat8Dir",

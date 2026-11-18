@@ -15,7 +15,7 @@ public static class WeaponAssetGenerator
 
     // ---------------- 生成入口 ----------------
 
-    [MenuItem("Tools/Survivor/Generate W1 Weapon Assets")]
+    [MenuItem("工具/幸存者/生成 W1 武器资产")]
     public static void Generate()
     {
         var dagger = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Textures/weapon_dagger.png");
@@ -331,7 +331,7 @@ public static class WeaponAssetGenerator
 
     private static int verifyDelayFrames;
 
-    [MenuItem("Tools/Survivor/Verify W1 Weapons (Play Mode)")]
+    [MenuItem("工具/幸存者/校验 W1 武器（Play 模式）")]
     public static void VerifyInPlayMode()
     {
         if (!Application.isPlaying)

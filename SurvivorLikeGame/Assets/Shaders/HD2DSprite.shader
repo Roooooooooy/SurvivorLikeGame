@@ -14,6 +14,15 @@ Shader "HD2D/SpriteLit"
         // 深度状态：主角主体保持正常深度，被遮挡时由 HD2D/SpriteXRay 的剪影补可见性
         _ZTest ("ZTest", Float) = 4
         _ZWrite ("ZWrite", Float) = 1
+        // 默认不透明；溶解材质会在运行时切成 SrcAlpha / OneMinusSrcAlpha
+        _SrcBlend ("Src Blend", Float) = 1
+        _DstBlend ("Dst Blend", Float) = 0
+        // 死亡/消失：0=完整，1=完全消失
+        _Dissolve ("Dissolve", Range(0,1)) = 0
+        [Toggle] _DissolveGold ("Golden Dissolve", Float) = 0
+        _DissolveEdgeColor ("Dissolve Edge Color", Color) = (0.65, 0.62, 0.58, 1)
+        _DissolveEdgeWidth ("Dissolve Edge Width", Range(0, 0.2)) = 0.06
+        _DissolveWind ("Dissolve Wind (xy)", Vector) = (-0.10, 0.38, 0, 0)
     }
 
     SubShader
@@ -31,6 +40,7 @@ Shader "HD2D/SpriteLit"
             Name "ForwardLit"
             Tags { "LightMode" = "UniversalForward" }
             Cull Off
+            Blend [_SrcBlend] [_DstBlend]
             ZWrite [_ZWrite]
             ZTest [_ZTest]
 
@@ -71,12 +81,21 @@ Shader "HD2D/SpriteLit"
                 half _AmbientBoost;
                 half4 _OutlineColor;
                 half _OutlineWidth;
+                half _Dissolve;
+                half _DissolveGold;
+                half4 _DissolveEdgeColor;
+                half _DissolveEdgeWidth;
+                float4 _DissolveWind;
+                half _SrcBlend;
+                half _DstBlend;
             CBUFFER_END
 
             Varyings vert(Attributes v)
             {
                 Varyings o;
-                VertexPositionInputs pos = GetVertexPositionInputs(v.positionOS.xyz);
+                float3 positionOS = v.positionOS.xyz;
+                // 原地溶解：不做整体飘移或膨胀。
+                VertexPositionInputs pos = GetVertexPositionInputs(positionOS);
                 o.positionCS = pos.positionCS;
                 o.positionWS = pos.positionWS;
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
@@ -86,12 +105,71 @@ Shader "HD2D/SpriteLit"
                 return o;
             }
 
+            // 3 层 value noise：溶解边缘是不规则团块，比棋盘抖动自然。
+            float Hash21(float2 p)
+            {
+                p = frac(p * float2(123.34, 456.21));
+                p += dot(p, p + 45.32);
+                return frac(p.x * p.y);
+            }
+
+            float ValueNoise(float2 p)
+            {
+                float2 c = floor(p);
+                float2 f = frac(p);
+                f = f * f * (3.0 - 2.0 * f);
+                float a = Hash21(c);
+                float b = Hash21(c + float2(1.0, 0.0));
+                float d = Hash21(c + float2(0.0, 1.0));
+                float e = Hash21(c + float2(1.0, 1.0));
+                return lerp(lerp(a, b, f.x), lerp(d, e, f.x), f.y);
+            }
+
+            float FBM(float2 p)
+            {
+                float v = 0.0;
+                float amp = 0.5;
+                for (int k = 0; k < 3; k++)
+                {
+                    v += amp * ValueNoise(p);
+                    p *= 2.03;
+                    amp *= 0.5;
+                }
+                return v / 0.875;
+            }
+
             half4 frag(Varyings i) : SV_Target
             {
                 half4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv) * _Color * i.color;
 
+                float dissolveMask = 1.0;
+                float dissolveAlpha = 1.0;
+                float goldEdge = 0.0;
+                if (_Dissolve > 0.0001)
+                {
+                    float edge = max(0.001, _DissolveEdgeWidth);
+                    if (_DissolveGold > 0.5)
+                    {
+                        // 主角：固定在原始像素上的团块逐步溶解，亮金边沿着边界推进。
+                        float2 pixel = floor(i.uv * _MainTex_TexelSize.zw);
+                        float n = FBM(pixel * 0.14);
+                        float threshold = lerp(-edge, 1.0 + edge, _Dissolve);
+                        dissolveMask = smoothstep(threshold - edge, threshold + edge, n);
+                        dissolveAlpha = dissolveMask;
+                        goldEdge = saturate(1.0 - abs(n - threshold) / edge);
+                    }
+                    else
+                    {
+                        // 灰烬消散仍使用细粒度噪声和整体淡出。
+                        float2 noiseUV = i.uv * _MainTex_TexelSize.zw * 0.45;
+                        float n = FBM(noiseUV);
+                        dissolveMask = saturate((n - _Dissolve) / edge);
+                        dissolveAlpha = dissolveMask * (1.0 - _Dissolve);
+                    }
+                }
+
                 // 外轮廓冷色描边：宽为 0 的材质（哥布林/柱子）完全不参与额外采样
-                if (tex.a < _Cutoff && _OutlineWidth > 0.001)
+                if (_Dissolve <= 0.0001 && tex.a < _Cutoff && _OutlineWidth > 0.001)
                 {
                     float2 t = _MainTex_TexelSize.xy * _OutlineWidth;
                     half n =
@@ -106,7 +184,10 @@ Shader "HD2D/SpriteLit"
                     if (n > _Cutoff * 2.0)
                         return half4(_OutlineColor.rgb * (0.35 + _AmbientBoost * 0.4), 1.0);
                 }
-                clip(tex.a - _Cutoff);
+                if (_Dissolve > 0.0001)
+                    tex.a *= dissolveAlpha;
+                else
+                    clip(tex.a - _Cutoff);
 
                 float3 normalWS = normalize(i.normalWS);
                 float4 shadowCoord = TransformWorldToShadowCoord(i.positionWS);
@@ -131,7 +212,20 @@ Shader "HD2D/SpriteLit"
                 half3 ambient = SampleSH(normalWS) + _AmbientBoost;
                 lighting = max(lighting, ambient);
 
-                return half4(tex.rgb * lighting, 1.0);
+                // 溶解中的残留像素去色成灰烬，保留原始明暗细节；alpha 负责软淡出。
+                half3 lit = tex.rgb * lighting;
+                if (_DissolveGold > 0.5)
+                {
+                    half3 gilded = lerp(lit, _DissolveEdgeColor.rgb * 0.42,
+                        smoothstep(0.0, 1.0, _Dissolve) * 0.45);
+                    // 自发光边缘不受场景阴影压暗，在倒地轮廓上保留金色亮边。
+                    return half4(gilded + _DissolveEdgeColor.rgb * goldEdge * 1.4, tex.a);
+                }
+                half lum = dot(lit, half3(0.299, 0.587, 0.114));
+                half3 ash = lerp(half3(lum, lum, lum), _DissolveEdgeColor.rgb * 0.75, 0.35);
+                half3 color = lerp(lit, ash, smoothstep(0.0, 1.0, _Dissolve));
+                color = lerp(_DissolveEdgeColor.rgb, color, dissolveMask);
+                return half4(color, tex.a);
             }
             ENDHLSL
         }
@@ -176,6 +270,13 @@ Shader "HD2D/SpriteLit"
                 half _AmbientBoost;
                 half4 _OutlineColor;
                 half _OutlineWidth;
+                half _Dissolve;
+                half _DissolveGold;
+                half4 _DissolveEdgeColor;
+                half _DissolveEdgeWidth;
+                float4 _DissolveWind;
+                half _SrcBlend;
+                half _DstBlend;
             CBUFFER_END
 
             float3 _LightDirection;
@@ -254,6 +355,13 @@ Shader "HD2D/SpriteLit"
                 half _AmbientBoost;
                 half4 _OutlineColor;
                 half _OutlineWidth;
+                half _Dissolve;
+                half _DissolveGold;
+                half4 _DissolveEdgeColor;
+                half _DissolveEdgeWidth;
+                float4 _DissolveWind;
+                half _SrcBlend;
+                half _DstBlend;
             CBUFFER_END
 
             Varyings vert(Attributes v)

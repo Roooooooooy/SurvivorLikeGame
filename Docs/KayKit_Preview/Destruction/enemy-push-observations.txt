@@ -1,0 +1,3 @@
+Observed original repro: FAIL stationary player displacement=1.1724 (maximum 0.02)
+Observed same repro after fix: PASS stationary player displacement=0.0000 (maximum 0.02)
+Control with zero chasing speed: displacement=0.0000

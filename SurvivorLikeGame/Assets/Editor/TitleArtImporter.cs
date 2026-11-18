@@ -9,7 +9,7 @@ public static class TitleArtImporter
 {
     const string Dir = "Assets/Resources/TitleUI";
 
-    [MenuItem("Tools/Survivor/Configure Title UI Art")]
+    [MenuItem("工具/幸存者/配置标题界面美术")]
     public static void Configure()
     {
         ConfigureSprite(Dir + "/frame_double.png", FilterMode.Point, new Vector4(24f, 24f, 24f, 24f));

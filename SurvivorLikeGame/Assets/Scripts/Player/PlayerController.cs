@@ -52,6 +52,8 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        if (RpgGame.RegionRuntime.IsAction) return;
+
         if (GameManager.Instance != null && GameManager.Instance.isGameOver)
         {
             // 死亡演出的黑魂式规则：时间不暂停，但主角不再受控。

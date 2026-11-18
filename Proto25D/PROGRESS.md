@@ -34,7 +34,7 @@
 
 ## 备注
 - 编辑器曾因 TiltShift pass 在 SceneView 执行而持续重绘卡死；已限制只对 `CameraType.Game` 执行。
-- 截图流程：进 Play → `Tools/HD2D/4. Capture HD-2D Preview`（Play 模式走 ScreenCapture，Edit 模式的手动 cam.Render 不会执行 Renderer Feature）。
+- 截图流程：进 Play → `工具/HD-2D/4. 截取 HD-2D 预览`（Play 模式走 ScreenCapture，Edit 模式的手动 cam.Render 不会执行 Renderer Feature）。
 
 ## 2026-11-02 美术打磨（未提交）
 
@@ -53,7 +53,7 @@
 - 描边在 8 邻域采样，宽为 0 时不执行额外采样。
 
 ### 场景元素方硬
-- 新增 `Assets/Editor/HD2DLowPolyKit.cs`（菜单 `Tools/HD2D/6. Build Low-Poly Dungeon Kit`）：
+- 新增 `Assets/Editor/HD2DLowPolyKit.cs`（菜单 `工具/HD-2D/6. 构建低模地牢套件`）：
   - 断墙：沿 Z 分 18 列、顶部高度随机，形成参差断口
   - 石柱：八棱底座 + 收分柱身 + 外扩柱头，柱头顶面随机压低
   - 高台/台阶：6 面内缩 + 12 条倒角边 + 8 个角三角面，顶面边缘带破损
@@ -69,8 +69,8 @@
 - 没有重跑 1000 敌人压测：避免覆盖已入库的 `perf_*.md`，且本次只改环境材质/几何，不影响敌人实例化渲染。
 
 ### 重建顺序
-1. `Tools/HD2D/3. Setup HD-2D Scene`（内部会自动跑菜单 6）
-2. `Tools/HD2D/5. Build 1000 Enemy Perf Scene`（从 HD2D_Proto 复制，必须跟在 3 之后）
+1. `工具/HD-2D/3. 搭建 HD-2D 场景`（内部会自动跑菜单 6）
+2. `工具/HD-2D/5. 构建 1000 敌人压测场景`（从 HD2D_Proto 复制，必须跟在 3 之后）
 
 ## 2026-11-03 主场景 SampleScene HD-2D 迁移（未提交）
 
@@ -83,7 +83,7 @@
 - 敌人继续走 `EnemySimRenderer` 的 `hd2dRendering=true` 路径（URP alpha clip + XZ + 实例化阴影）。
 - 旧 2D 背景（`Background` / `BackgroundGrunge` / `BackgroundDecals`）关闭，换成跟随玩家的 3D 地面。
 
-### 场景改动（`Tools/HD2D/7. Migrate SampleScene to HD-2D`）
+### 场景改动（`工具/HD-2D/7. 将 SampleScene 迁移到 HD-2D`）
 - `Assets/Editor/SampleSceneHd2dSetup.cs`，可重复执行：
   - 相机正交 → 透视（FOV 35，30° 俯角，offset `(0, 9, -14)`），`CameraFollow.hd2d = true`
   - Canvas `ScreenSpaceOverlay`（HUD/升级/死亡/结算不再受 3D 相机与移轴后处理影响）
@@ -124,7 +124,7 @@
   - 28 个动作：`walk` / `run` / `sit` / `lay` / `sleep` / `attack-str|int|cha` / `hit` / `defeat` / `jump` / `fishing` / `petting` 等。
   - 2 套 skin：`custom`（基础猫身体）+ `default`（9 顶帽子、眼镜、龙翼/飞翼、纹样、表情等约 253 个附件）。
 - 运行时：Spine Runtimes 4.1.43（从本机 `pics-blast` 项目复制），补全 `spine-csharp` 源码与 asmdef。
-- 资产：`Assets/Resources/Player/CatSpine/`（`cat_spine.json` / `.atlas.txt` / `.png` + `_Material` / `_Atlas` / `_SkeletonData`），菜单 `Tools/HD2D/8. Build Cat Spine Assets`。
+- 资产：`Assets/Resources/Player/CatSpine/`（`cat_spine.json` / `.atlas.txt` / `.png` + `_Material` / `_Atlas` / `_SkeletonData`），菜单 `工具/HD-2D/8. 构建猫 Spine 资产`。
 - `Hd2dSpinePlayer`：
   - 逻辑/碰撞仍走 `PlayerController` 的 XY；视图映射到 `(x, 0, y)` 并面向相机。
   - 动画：静止 `eyes blink`、移动 `walk` / `run`、命中 `attack-str`（订阅 `CombatEvents.HitDetailed`）、受击 `hit`、死亡 `defeat`。

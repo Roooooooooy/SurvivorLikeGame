@@ -7,7 +7,7 @@ public static class DifficultyGenerator
 {
     const string DifficultyDir = "Assets/Resources/Difficulties";
 
-    [MenuItem("Tools/Survivor/Generate Difficulties")]
+    [MenuItem("工具/幸存者/生成难度")]
     public static void Generate()
     {
         if (!EnsureFolder()) return;

@@ -1,7 +1,7 @@
 using UnityEngine;
 
 // 障碍物 → 低模地牢模块的映射表。迁移脚本会生成 Resources/HD2D/PropLibrary.asset。
-[CreateAssetMenu(fileName = "PropLibrary", menuName = "HD2D/Prop Library")]
+[CreateAssetMenu(fileName = "PropLibrary", menuName = "HD-2D/道具库")]
 public class Hd2dPropLibrary : ScriptableObject
 {
     [System.Serializable]
