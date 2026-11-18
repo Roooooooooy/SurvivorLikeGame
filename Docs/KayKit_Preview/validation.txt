@@ -1,0 +1,29 @@
+KayKit integration: real movement, collision, E interaction, persistence and region routing
+PASS new region recognized as ActionRPG
+PASS spawn mapped to intended entrance
+PASS door begins closed and solid
+PASS chest begins unopened
+PASS XY chest and XZ visual agree
+PASS plain floor surface at character ground level
+FLOOR BOUNDS Center: (-10.00, -0.08, -8.00), Extents: (1.00, 0.08, 1.00)
+PASS south boundary blocks real movement
+PASS east boundary matches wall footprint
+PASS crate blocks movement at visible footprint
+PASS player can leave crate contact
+PASS closed door blocks approach
+PASS WorldInteractor selects the door
+PASS E opens door and clears passage after animation
+PASS door leaf rotates on its hinge
+PASS door state written to its own region
+PASS player walks through doorway into side room
+PASS WorldInteractor finds chest from walkable approach
+PASS E opens chest once
+PASS chest grants exactly configured gold
+PASS lid opens upward instead of into chest
+PASS repeat interaction grants no extra rewards
+PASS door stays passable after reload
+PASS chest and gold persist after reload
+PASS rift enters existing survivor sub-mode
+PASS survivor return routes to the new region
+Render triangles 111795 batches 484
+RESULT passed=25 failed=0

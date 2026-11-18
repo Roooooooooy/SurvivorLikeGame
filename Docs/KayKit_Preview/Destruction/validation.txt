@@ -1,0 +1,63 @@
+Enemy body contact and real keyboard/Hitbox destructible integration
+PASS direction 0 chasing enemy cannot push stationary player; drift=0.0000
+PASS direction 0 player can move away from enemy
+PASS direction 1 chasing enemy cannot push stationary player; drift=0.0000
+PASS direction 1 player can move away from enemy
+PASS direction 2 chasing enemy cannot push stationary player; drift=0.0000
+PASS direction 2 player can move away from enemy
+PASS direction 3 chasing enemy cannot push stationary player; drift=0.0000
+PASS direction 3 player can move away from enemy
+PASS direction 4 chasing enemy cannot push stationary player; drift=0.0000
+PASS direction 4 player can move away from enemy
+PASS direction 5 chasing enemy cannot push stationary player; drift=0.0000
+PASS direction 5 player can move away from enemy
+PASS direction 6 chasing enemy cannot push stationary player; drift=0.0000
+PASS direction 6 player can move away from enemy
+PASS direction 7 chasing enemy cannot push stationary player; drift=0.0000
+PASS direction 7 player can move away from enemy
+PASS four simultaneous enemies cannot squeeze player
+PASS six ordinary crate/table groups are damageable
+PASS reward chest remains E interaction only
+BEFORE entrance_crate health=20 player=(-1.86, -5.00, 0.00) facing=(1.00, 0.00) bounds=Center: (-1.00, -5.00, 0.00), Extents: (0.38, 0.38, 0.00) enabled=True timeScale=1 keyboard=Keyboard1
+ATTACK active=True step=0
+AFTER entrance_crate health=10 expectedDamage=10
+PASS entrance_crate real J/Hitbox applies one hit despite duplicate colliders
+PASS entrance_crate wounded cracked model still blocks movement
+PASS entrance_crate pre-cut wood fragments do not participate in character physics
+PASS entrance_crate attacks destroy the prop
+PASS entrance_crate all blockers removed on destruction
+PASS entrance_crate fragments burst on lethal hit
+PASS entrance_crate ordinary destruction grants no treasure rewards
+PASS entrance_crate destruction state persisted
+PASS player walks through the destroyed crate footprint
+PASS entrance_crate temporary fragments cleaned up
+BEFORE side_room_table health=30 player=(7.07, -2.00, 0.00) facing=(1.00, 0.00) bounds=Center: (8.00, -2.00, 0.00), Extents: (0.55, 0.55, 0.00) enabled=True timeScale=1 keyboard=Keyboard1
+ATTACK active=True step=0
+AFTER side_room_table health=20 expectedDamage=10
+PASS side_room_table real J/Hitbox applies one hit despite duplicate colliders
+PASS side_room_table wounded cracked model still blocks movement
+PASS side_room_table pre-cut wood fragments do not participate in character physics
+PASS side_room_table attacks destroy the prop
+PASS side_room_table all blockers removed on destruction
+PASS side_room_table fragments burst on lethal hit
+PASS side_room_table ordinary destruction grants no treasure rewards
+PASS side_room_table destruction state persisted
+PASS side_room_table temporary fragments cleaned up
+BEFORE side_room_supplies health=30 player=(3.52, -2.52, 0.00) facing=(1.00, 0.00) bounds=Center: (4.53, -2.52, 0.00), Extents: (0.63, 0.67, 0.00) enabled=True timeScale=1 keyboard=Keyboard1
+ATTACK active=True step=0
+AFTER side_room_supplies health=20 expectedDamage=10
+PASS side_room_supplies real J/Hitbox applies one hit despite duplicate colliders
+PASS side_room_supplies wounded cracked model still blocks movement
+PASS side_room_supplies pre-cut wood fragments do not participate in character physics
+PASS side_room_supplies attacks destroy the prop
+PASS side_room_supplies all blockers removed on destruction
+PASS side_room_supplies fragments burst on lethal hit
+PASS side_room_supplies ordinary destruction grants no treasure rewards
+PASS side_room_supplies destruction state persisted
+PASS side_room_supplies temporary fragments cleaned up
+PASS entrance_crate stays destroyed/passable after reload without respawning debris
+PASS side_room_table stays destroyed/passable after reload without respawning debris
+PASS side_room_supplies stays destroyed/passable after reload without respawning debris
+PASS treasure chest still found by E interaction
+PASS treasure chest E reward still works
+RESULT passed=52 failed=0
