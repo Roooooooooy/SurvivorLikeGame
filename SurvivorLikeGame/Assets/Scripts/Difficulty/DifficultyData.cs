@@ -2,7 +2,7 @@ using UnityEngine;
 
 // 难度数据：敌人血量/伤害/速度与金币收益的全局倍率。
 // 一份资产 = 一个难度档位；选择结果存 PlayerPrefs，新局开始时由 EnemySimulation 读取。
-[CreateAssetMenu(fileName = "Difficulty", menuName = "Survivor/Difficulty")]
+[CreateAssetMenu(fileName = "Difficulty", menuName = "幸存者/难度")]
 public class DifficultyData : ScriptableObject
 {
     public string id;                    // 唯一标识，PlayerPrefs 选择/解锁键的依据

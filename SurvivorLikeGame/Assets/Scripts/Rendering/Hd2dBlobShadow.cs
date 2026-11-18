@@ -54,6 +54,13 @@ public class Hd2dBlobShadow : MonoBehaviour
         transform.localScale = new Vector3(diameter, 1f, depth);
     }
 
+    // 死亡消散时淡出接地阴影；不传 follow 的实例也能单独调。
+    public void SetOpacity(float value)
+    {
+        if (mat == null) return;
+        mat.SetColor("_Color", new Color(0.02f, 0.015f, 0.025f, Mathf.Clamp01(value)));
+    }
+
     void OnDestroy()
     {
         if (mat != null) Destroy(mat);

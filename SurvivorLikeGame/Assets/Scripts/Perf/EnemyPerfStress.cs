@@ -77,6 +77,18 @@ public class EnemyPerfStress : MonoBehaviour
 
     void Start()
     {
+        // 压测场景如果被编辑器以 additive 方式和其他场景一起加载，不要在别人的区域里刷怪。
+        if (RpgGame.RegionRuntime.IsAction)
+        {
+            enabled = false;
+            return;
+        }
+        if (UnityEngine.SceneManagement.SceneManager.GetActiveScene() != gameObject.scene)
+        {
+            enabled = false;
+            return;
+        }
+
         Time.timeScale = 1f;
         // 编辑器里关掉 vsync 才能看到真实渲染上限；结果同时给出 ms，便于换算 60/120 帧预算
         QualitySettings.vSyncCount = 0;

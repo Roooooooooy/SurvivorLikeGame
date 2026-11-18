@@ -162,7 +162,7 @@ public partial class EnemySimulation
             typeFrameSize[i] = new Vector2(sprite.bounds.size.x / typeAnimFrames[i], sprite.bounds.size.y / rows);
 
             // 单帧内容矩形：把四周透明留白裁掉，减少 alpha clip 之前跑的无用片元。
-            // 编辑器工具 Tools/HD2D/9 会把实测值写回 EnemyTypes.asset；未分析过时为全帧。
+            // 编辑器工具 工具/HD-2D/9 会把实测值写回 EnemyTypes.asset；未分析过时为全帧。
             Vector4 trim = hd2d ? NormalizeTrim(t.contentRect) : new Vector4(0f, 0f, 1f, 1f);
 
             if (!batchByTexture.TryGetValue(sprite.texture, out var batch))
@@ -248,6 +248,9 @@ public partial class EnemySimulation
     void LateUpdate()
     {
         if (!initialized || batches == null) return;
+
+        // 动作区即使误加载了 EnemySimulation，也不渲染幸存者敌群。
+        if (RpgGame.RegionRuntime.IsAction) return;
 
         foreach (var b in batches) b.count = 0;
         float time = Time.time;
@@ -336,11 +339,9 @@ public partial class EnemySimulation
                 Quaternion rot = Quaternion.identity;
                 if (cachedCamera != null)
                 {
-                    // 只绕 Y 轴朝向相机（HD-2D billboard），保持脚底始终贴地
-                    Vector3 toCam = cachedCamera.transform.position - groundPos;
-                    toCam.y = 0f;
-                    if (toCam.sqrMagnitude > 1e-6f)
-                        rot = Quaternion.LookRotation(toCam, Vector3.up);
+                    // 固定相机 yaw：画面边缘的敌人不再各自向相机偏转，方向保持一致。
+                    rot = Quaternion.Euler(0f,
+                        cachedCamera.transform.eulerAngles.y + 180f, 0f);
                 }
 
                 // 按内容矩形收紧 quad：透明留白不再提交片元，同时保持角色脚底/相对位置不变

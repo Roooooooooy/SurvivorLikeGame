@@ -33,6 +33,7 @@ public class BossReward : MonoBehaviour
     static void EnsureInstance()
     {
         if (instance != null) return;
+        if (RpgGame.RegionRuntime.IsAction) return;
         new GameObject("[BossReward]").AddComponent<BossReward>();
     }
 

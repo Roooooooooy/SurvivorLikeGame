@@ -54,6 +54,9 @@ public partial class EnemySimulation : MonoBehaviour
     {
         get
         {
+            // 动作区不允许幸存者敌群系统被意外拉起。
+            if (RpgGame.RegionRuntime.IsAction) return null;
+
             if (instance == null)
             {
                 instance = FindFirstObjectByType<EnemySimulation>();
@@ -260,6 +263,10 @@ public partial class EnemySimulation : MonoBehaviour
     void Update()
     {
         if (!initialized) return;
+
+        // 动作区即使误加载了 EnemySimulation，也不推进仿真。
+        if (RpgGame.RegionRuntime.IsAction) return;
+
         // 注意：死亡演出期间（isGameOver）仿真继续运行——怪群继续涌动，黑魂味更足
 
         var player = PlayerController.Instance;

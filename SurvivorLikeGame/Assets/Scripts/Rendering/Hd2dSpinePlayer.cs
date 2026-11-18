@@ -150,13 +150,9 @@ public class Hd2dSpinePlayer : MonoBehaviour
         Vector3 p = player.position;
         transform.position = new Vector3(p.x, worldYOffset, p.y);
 
+        // 固定相机 yaw，避免角色偏离画面中心时 sprite 向相机偏转。
         if (cam != null)
-        {
-            Vector3 toCam = cam.transform.position - transform.position;
-            toCam.y = 0f;
-            if (toCam.sqrMagnitude > 0.0001f)
-                transform.rotation = Quaternion.LookRotation(toCam, Vector3.up);
-        }
+            transform.rotation = Quaternion.Euler(0f, cam.transform.eulerAngles.y + 180f, 0f);
 
         SyncXRay();
 
